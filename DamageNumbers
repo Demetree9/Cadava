@@ -1,0 +1,92 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class DamageNumbers : MonoBehaviour
+{
+    //Instantiated Class:
+    public HealthManaStama healthManaStama;  
+    public int hPCheck;
+    public GameObject one;
+    public GameObject two;
+    public GameObject three;
+    public TextMeshProUGUI damageNumberOne;
+    public TextMeshProUGUI damageNumberTwo;
+    public TextMeshProUGUI damageNumberThree;
+    public bool oneOn = false;
+    public bool twoOn = false;
+    public bool threeOn = false;
+
+    void Start(){
+       hPCheck = healthManaStama.maxHp; 
+    } 
+    void Update()
+    {
+        if (hPCheck != healthManaStama.currentHp){
+            //subtract and get damage done and display. Then set hp check variable back to current hp. 
+            int damageDone = hPCheck - healthManaStama.currentHp;
+            //Random Number for which of the three displays the damage number will appear. 
+            int randomOneThroughThree = Random.Range(1,4);
+            if (randomOneThroughThree == 1){
+                if (!oneOn){    
+                    oneOn = true; 
+                    one.SetActive(true);                          
+                    damageNumberOne.text = damageDone.ToString();
+                    StartCoroutine(NumberResetOne(.5f));
+                    hPCheck = healthManaStama.currentHp;
+                }
+                else{
+                    randomOneThroughThree = 2;
+                }
+            }
+            else if (randomOneThroughThree == 2){
+            if (!twoOn){    
+                    twoOn = true; 
+                    two.SetActive(true);                          
+                    damageNumberTwo.text = damageDone.ToString();
+                    StartCoroutine(NumberResetTwo(.5f));
+                    hPCheck = healthManaStama.currentHp;
+                }
+                else{
+                    randomOneThroughThree = 3;
+                } 
+            }
+            else if (randomOneThroughThree == 3){
+                if (!threeOn){    
+                    threeOn = true; 
+                    three.SetActive(true);                          
+                    damageNumberThree.text = damageDone.ToString();
+                    StartCoroutine(NumberResetThree(.5f));
+                    hPCheck = healthManaStama.currentHp;
+                }
+                else{
+                    randomOneThroughThree = 1;
+                }  
+            }
+            
+
+        }
+
+    } 
+     
+    private IEnumerator NumberResetOne(float delay){
+        yield return new WaitForSeconds(delay);
+        one.SetActive(false);
+        oneOn = false;
+    }
+    private IEnumerator NumberResetTwo(float delay){
+        yield return new WaitForSeconds(delay);
+        two.SetActive(false);      
+        twoOn = false;  
+    }
+   private IEnumerator NumberResetThree(float delay){
+        yield return new WaitForSeconds(delay);
+        three.SetActive(false);
+        threeOn = false;
+        
+    } 
+}
+
+   
