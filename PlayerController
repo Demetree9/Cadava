@@ -1,0 +1,164 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    //Instantiated Classes:
+    public HealthManaStama healthManaStama;
+    public Timer staminaTimer;
+    //Speed References:
+    public Vector3 newVelocity;
+    private float speed = 3f;    
+    [SerializeField] private Rigidbody2D rigbod;
+    [SerializeField] private Rigidbody2D camRB;
+    public GameObject cameraObj;
+    public Transform camera;
+    public Transform player;
+    //Dodge Bools:
+    public bool cameraLocked = false;
+    public static bool isDodging = false;
+    public bool canDodge = true;
+    //Color and Sprite Renderer:
+    public SpriteRenderer spriteRen;
+    public Color color;
+    public Color staringColor;
+    //Spell References:
+    public GameObject spellSpawn;
+    public GameObject fireBolt;
+    public Transform spellSpawnPos;
+    public bool canBasicAttack = true;
+    //Damage Color:
+    public static int healthCheck;
+    //Gets starting color:
+    private void Start(){
+        staringColor = GetComponent<SpriteRenderer>().color;
+        spellSpawnPos = spellSpawn.GetComponent<SpriteRenderer>().transform;
+        healthCheck = healthManaStama.currentHp;
+    }
+
+    private void Awake(){
+        healthCheck = healthManaStama.maxHp;
+    }
+
+    void Update()
+    {
+        //Movement:
+        //Dodge:
+        if (Input.GetKeyDown(KeyCode.Space) & !isDodging & canDodge & healthManaStama.currentStam >= 25){ 
+            isDodging = true; 
+            canDodge = false;
+            healthManaStama.canRegainStamina = false;
+            if(isDodging)          
+                Dodge();
+                StartCoroutine(DodgeReset(.3f));
+                StartCoroutine(DodgeCoolDown(1));
+                StartCoroutine(healthManaStama.StaminaRegainTimer(5f));                
+        }
+        //Basic ass movement:
+        else if (!isDodging) {
+            newVelocity.x = Input.GetAxis("Horizontal") * speed;
+            newVelocity.y = Input.GetAxis("Vertical") * speed;
+            rigbod.velocity = transform.TransformDirection(newVelocity);
+        }
+        //Flips Sprite based on Movement:
+        if (newVelocity.x < 0)
+            spriteRen.flipX = false;
+        else if (newVelocity.x > 0)
+            spriteRen.flipX = true;          
+        //Camera Gameobject Follow:
+        if (!cameraLocked)
+        cameraObj.transform.position = Vector3.MoveTowards(cameraObj.transform.position, player.transform.position, .8f);  
+        //Spell FIre:
+        //Basic Bolt:
+        if (Input.GetKey(KeyCode.Mouse0) & canBasicAttack){
+            Shoot();
+            canBasicAttack = false;
+            StartCoroutine(BasicAttackCoolDown(.5f));
+        }  
+        //Stamina Regain:
+        if (staminaTimer.timesReset == 1 & healthManaStama.canRegainStamina){
+            healthManaStama.RestoreStamina(.05f);
+        }   
+        //Damage Color:
+        if (healthManaStama.currentHp != healthCheck){
+            DamageColor();
+            healthCheck = healthManaStama.currentHp;            
+        }
+    }
+    //Camera Map Corner Lock:       
+    private void OnTriggerEnter2D(Collider2D col){
+        if (col.gameObject.tag == "RightLeft"){           
+            camera.parent = null;
+            CameraFreeze.rightLeft = true;            
+            cameraLocked = true;
+        }
+        else if (col.gameObject.tag == "TopBottom"){
+            camera.parent = null;
+            CameraFreeze.topBottom = true;            
+            cameraLocked = true;
+        }  
+        
+    }
+    //Detects if Camera should be Locked:
+    private void OnTriggerExit2D(Collider2D col){        
+        if(col.gameObject.tag =="RightLeft"){
+            CameraFreeze.rightLeft = false;
+            CameraFreeze.cameraFullLock = false;
+            if (!CameraFreeze.rightLeft & !CameraFreeze.topBottom){
+                camera.SetParent(player);
+                cameraLocked = false;               
+            }            
+        }        
+        if(col.gameObject.tag =="TopBottom" ){
+            CameraFreeze.topBottom = false;
+            CameraFreeze.cameraFullLock = false;
+            if (!CameraFreeze.rightLeft & !CameraFreeze.topBottom){
+            camera.SetParent(player);
+            cameraLocked = false;
+            }
+        }
+    }
+    //Dodge:
+    private void Dodge(){
+        rigbod.velocity = transform.TransformDirection(newVelocity *2);
+        spriteRen.color = new Color(1,1,1,.3f);
+        healthManaStama.Tired(25);
+        staminaTimer.TimerReset();
+    }
+    //Dodge Reset:
+    private IEnumerator DodgeReset(float delay){
+        yield return new WaitForSeconds(delay);
+        spriteRen.color = staringColor; 
+        isDodging = false;
+    }
+    //Sets a time so you can't dodge every .3 seconds like a madman.
+    private IEnumerator DodgeCoolDown(float delay){
+        yield return new WaitForSeconds(delay);
+        canDodge = true;        
+    }
+    //Spell Shooting
+    private void Shoot(){
+        GameObject spell = Instantiate(fireBolt, spellSpawnPos.position, spellSpawn.transform.rotation);
+        Destroy(spell, 2);        
+        Rigidbody2D rb = spell.GetComponent<Rigidbody2D>();
+        rb.AddForce(spellSpawnPos.up * 6f, ForceMode2D.Impulse);
+    }
+    private IEnumerator BasicAttackCoolDown(float delay){
+        yield return new WaitForSeconds(delay);
+        canBasicAttack = true;        
+    }
+    //Damage color logic:
+    private void DamageColor(){        
+        spriteRen.color = new Color(1, 0, 0, 1);
+        StartCoroutine(DamageColorRevert(.5f));
+    }
+
+    private IEnumerator DamageColorRevert(float delay){
+        yield return new WaitForSeconds(delay);
+        spriteRen.color = staringColor;       
+    }
+}   
+        
+    
+
