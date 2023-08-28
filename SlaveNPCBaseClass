@@ -1,0 +1,299 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+public class SlaveNPCBaseClass : MonoBehaviour
+{        
+    //Player:
+    private GameObject player;
+
+    //Navmesh Agent:
+    private UnityEngine.AI.NavMeshAgent agent;     
+    
+    //Destinations & Bools: -------------------------
+    //Market:
+    private GameObject food;
+    private GameObject weapons;
+    private GameObject potions;
+    private GameObject magic;
+
+    //Slave Office:
+    public GameObject slaveOffice;
+
+    //Combat Ring:
+    //GameObjects:
+    private GameObject seat;
+    private GameObject seatOne;
+    private GameObject seatTwo;
+    private GameObject seatThree;
+    private GameObject seatFour;
+    private GameObject seatFive;
+    private GameObject seatSix;
+    private GameObject seatSeven;
+    private GameObject leaveSeat;
+    //Bools:
+    public static bool seatTaken = false;
+    public static bool seatOneTaken = false;
+    public static bool seatTwoTaken = false;
+    public static bool seatThreeTaken = false;
+    public static bool seatFourTaken = false;
+    public static bool seatFiveTaken = false;
+    public static bool seatSixTaken = false;
+    public static bool seatSevenTaken = false;
+
+    //Fountains:
+    private GameObject payFountain;
+    private GameObject dirtyFountain;
+
+    //Tables:
+    private GameObject tableBottomRight;
+    private GameObject tableTopLeftOne;
+    private GameObject tableTopLeftTwo;
+    private GameObject tableTopLeftThree;
+
+    //Sleeping Quarters:
+    public static List<GameObject> sleepingQuartersList;
+    public int zeroThroughTwentyTwo;
+    public int previousSleepingQuartersTask;   
+    private GameObject sleepingQuartersBottomRight;
+    private GameObject sleepingQuartersBottomRightOne;
+    private GameObject sleepingQuartersBottomLeft;
+    private GameObject sleepingQuartersBottomLeftOne;
+    private GameObject sleepingQuartersBottomLeftTwo;
+    private GameObject sleepingQuartersBottomLeftThree;
+    private GameObject sleepingQuartersBottomLeftFour;
+    private GameObject sleepingQuartersBottomLeftFive;
+    private GameObject sleepingQuartersBottomLeftSix;
+    private GameObject sleepingQuartersBottomLeftSeven;
+    private GameObject sleepingQuartersBottomLeftEight;
+    private GameObject sleepingQuartersBottomLeftNine;
+    private GameObject sleepingQuartersBottomLeftTen;
+    private GameObject sleepingQuartersBottomLeftEleven;
+    private GameObject sleepingQuartersBottomLeftTwelve;
+    private GameObject sleepingQuartersBootomLeftThirteen;
+    private GameObject sleepingQuartersBottomLeftFourteen;
+    private GameObject sleepingQuartersBommLeftFifteen;
+    private GameObject sleepingQuartersTopLeft;
+    private GameObject sleepingQuartersTopLeftOne;
+    private GameObject sleepingQuartersTopLeftTwo; 
+
+    //Slave Manager's Quarters:
+    private GameObject slaveManagersQuarters;   
+    
+    private void Start(){        
+        //Finds Player:
+        player = GameObject.FindGameObjectWithTag("Player");
+
+        //Assigns Navmesh Agent: --------------------
+        agent = GetComponent<NavMeshAgent>();
+        agent.updateRotation = false;
+        agent.updateUpAxis = false;  
+
+        //Sets Destinations: ---------------------------
+        //Market:
+        food = GameObject.Find("Food");
+        weapons = GameObject.Find("Weapons");
+        potions = GameObject.Find("Potions");
+        magic = GameObject.Find("Magic");
+
+        //Cobmat Arenas: ------------------------------
+        seat = GameObject.Find("Seat");
+        seatOne = GameObject.Find("Seat (1)");
+        seatTwo = GameObject.Find("Seat (2)");
+        seatThree = GameObject.Find("Seat (3)");
+        seatFour = GameObject.Find("Seat (4)");
+        seatFive = GameObject.Find("Seat (5)");
+        seatSix = GameObject.Find("Seat (6)");
+        seatSeven = GameObject.Find("Seat (7)");
+        leaveSeat = GameObject.Find("LeaveSeat");
+
+        //Slave Office: ----------------------------------
+        slaveOffice = GameObject.Find("SlaveOffice");
+
+        //Fountains: --------------------------------------
+        payFountain = GameObject.Find("PayFountain");
+        dirtyFountain = GameObject.Find("DirtyFountain");
+
+        //Tables: ------------------------------------------
+        tableBottomRight = GameObject.Find("TableBottomRight");
+        tableTopLeftOne = GameObject.Find("TableTopLeftOne");
+        tableTopLeftTwo = GameObject.Find("TableTopLeftTwo");
+        tableTopLeftThree = GameObject.Find("TableTopLeftThree");
+
+        //Sleeping Quarers: ---------------------------------------
+        //Bottom Right:
+        sleepingQuartersBottomRight = GameObject.Find("SleepingQuartersBottomRight");
+        sleepingQuartersBottomRightOne = GameObject.Find("SleepingQuartersBottomRight (1)");
+        //Bottom Left:
+        sleepingQuartersBottomLeft = GameObject.Find("SleepingQuartersBottomLeft");
+        sleepingQuartersBottomLeftOne = GameObject.Find("SleepingQuartersBottomLeft (1)");
+        sleepingQuartersBottomLeftTwo = GameObject.Find("SleepingQuartersBottomLeft (2)");
+        sleepingQuartersBottomLeftThree = GameObject.Find("SleepingQuartersBottomLeft (3)");
+        sleepingQuartersBottomLeftFour = GameObject.Find("SleepingQuartersBottomLeft (4)");
+        sleepingQuartersBottomLeftFive = GameObject.Find("SleepingQuartersBottomLeft (5)");
+        sleepingQuartersBottomLeftSix = GameObject.Find("SleepingQuartersBottomLeft (6)");
+        sleepingQuartersBottomLeftSeven = GameObject.Find("SleepingQuartersBottomLeft (7)");
+        sleepingQuartersBottomLeftEight = GameObject.Find("SleepingQuartersBottomLeft (8)");
+        sleepingQuartersBottomLeftNine = GameObject.Find("SleepingQuartersBottomLeft (9)");
+        sleepingQuartersBottomLeftTen = GameObject.Find("SleepingQuartersBottomLeft (10)");
+        sleepingQuartersBottomLeftEleven = GameObject.Find("SleepingQuartersBottomLeft (11)");
+        sleepingQuartersBottomLeftTwelve = GameObject.Find("SleepingQuartersBottomLeft (12)");
+        sleepingQuartersBootomLeftThirteen = GameObject.Find("SleepingQuartersBottomLeft (13)");
+        sleepingQuartersBottomLeftFourteen = GameObject.Find("SleepingQuartersBottomLeft (14)");
+        sleepingQuartersBommLeftFifteen = GameObject.Find("SleepingQuartersBottomLeft (15)");
+        //Top Left:
+        sleepingQuartersTopLeft = GameObject.Find("SleepingQuartersTopLeft");
+        sleepingQuartersTopLeftOne = GameObject.Find("SleepingQuartersTopLeft (1)");
+        sleepingQuartersTopLeftTwo = GameObject.Find("SleepingQuartersTopLeft (2)");  
+
+        //Slave Master's Quarters: -----------------------------------------------
+        slaveManagersQuarters = GameObject.Find("SlaveManagersQuarters");
+    }
+    //Navigation Methods: ------------------------------------------
+    public void FollowPlayer(){
+        agent.SetDestination(player.transform.position);
+    }
+    //Market: -----------------------------------------------
+    public void BuyFood(){
+        agent.SetDestination(food.transform.position);
+    }
+    public void BuyWeapons(){
+        agent.SetDestination(weapons.transform.position);
+    } 
+    public void BuyPotions(){
+        agent.SetDestination(potions.transform.position);
+    } 
+    public void BuyMagic(){
+        agent.SetDestination(magic.transform.position);
+    }  
+    //Slave Office: ------------------------------------------
+    public void SlaveOffice(){
+        agent.SetDestination(slaveOffice.transform.position);       
+    } 
+    //Comabat Arena: ------------------------------------------
+    public void SpectateCombatArena(){
+        if (!seatTaken){
+            agent.SetDestination(seat.transform.position);
+            if (this.transform.position == seat.transform.position){
+                seatTaken = true;    
+            }
+                               
+        }            
+        else if (!seatOneTaken){
+            agent.SetDestination(seatOne.transform.position);
+            seatOneTaken = true;
+        }            
+        else if (!seatTwoTaken){
+            agent.SetDestination(seatTwo.transform.position);
+            seatTwoTaken = true;
+        }            
+        else if (!seatThreeTaken){
+            agent.SetDestination(seatThree.transform.position);
+            seatThreeTaken =  true;
+        }            
+        else if (!seatFourTaken){
+            agent.SetDestination(seatFour.transform.position);
+            seatFourTaken = true;
+        }            
+        else if (!seatFiveTaken){
+            agent.SetDestination(seatFive.transform.position);
+            seatFiveTaken = true;
+        }            
+        else if (!seatSixTaken){
+            agent.SetDestination(seatSix.transform.position);
+            seatSixTaken = true;
+        }            
+        else if (!seatSevenTaken){
+            agent.SetDestination(seatSeven.transform.position);
+            seatSevenTaken = true;
+        }  
+        else {
+             agent.SetDestination(leaveSeat.transform.position);
+        }          
+    } 
+    //Fountains:--------------------------------------------------
+    public void DirtyFountain(){
+         agent.SetDestination(dirtyFountain.transform.position);
+    }     
+    public void PayFountain(){
+         agent.SetDestination(payFountain.transform.position);
+    } 
+    //Tables: ------------------------------------------------
+    public void TableBottomRight(){
+        agent.SetDestination(tableBottomRight.transform.position);
+    }
+     public void TableTopLeftOne(){
+        agent.SetDestination(tableTopLeftOne.transform.position);
+    }
+     public void TableTopLeftTwo(){
+        agent.SetDestination(tableTopLeftTwo.transform.position);
+    }
+     public void TableTopLeftThree(){
+        agent.SetDestination(tableTopLeftThree.transform.position);
+    }
+    //Sleeping Quarters: -------------------------------------------
+    public void SleepingQuarters(){
+        if (sleepingQuartersList == null){
+            //Initialize List:
+            sleepingQuartersList = new List<GameObject>();
+
+            //Add items to List:
+            sleepingQuartersList.Add(sleepingQuartersBottomRight);
+            sleepingQuartersList.Add(sleepingQuartersBottomRightOne);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeft);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftOne);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftTwo);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftThree);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftFour);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftFive);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftSix);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftSeven);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftEight);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftNine);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftTen);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftEleven);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftTwelve);
+            sleepingQuartersList.Add(sleepingQuartersBootomLeftThirteen);
+            sleepingQuartersList.Add(sleepingQuartersBottomLeftFourteen);
+            sleepingQuartersList.Add(sleepingQuartersBommLeftFifteen);
+            sleepingQuartersList.Add(sleepingQuartersTopLeft);
+            sleepingQuartersList.Add(sleepingQuartersTopLeftOne);
+            sleepingQuartersList.Add(sleepingQuartersTopLeftTwo);
+            zeroThroughTwentyTwo = Random.Range(0,22); 
+            previousSleepingQuartersTask = zeroThroughTwentyTwo;                       
+        }
+        //Choosing Randomly from List:  
+        if (zeroThroughTwentyTwo == previousSleepingQuartersTask){
+            var destination = sleepingQuartersList[zeroThroughTwentyTwo];        
+            agent.SetDestination(destination.transform.position);
+        }         
+        //Checks if agent is at Desitnation:
+        if (ReachedDestinationOrGaveUp() & zeroThroughTwentyTwo == previousSleepingQuartersTask){
+            zeroThroughTwentyTwo = Random.Range(0,22); 
+            agent.SetDestination(transform.position);
+            StartCoroutine(SleepingQuartersResetTimer(5f));
+        }               
+    } 
+    //Slave Manager's Quarters: --------------------------------------------------
+    public void SlaveManagersQuarters(){
+       agent.SetDestination(slaveManagersQuarters.transform.position); 
+    }
+    public bool ReachedDestinationOrGaveUp(){        
+        if (!agent.pathPending){
+            if (agent.remainingDistance <= agent.stoppingDistance){
+                if (!agent.hasPath || agent.velocity.sqrMagnitude == 0f){
+                    return true;
+                }
+           }
+        }
+    return false;
+    } 
+    private IEnumerator SleepingQuartersResetTimer(float delay){
+        yield return new WaitForSeconds(delay);
+        previousSleepingQuartersTask = zeroThroughTwentyTwo;
+    }
+}
+
+    
+
