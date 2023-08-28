@@ -1,0 +1,36 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CameraFreeze : MonoBehaviour
+{
+  public static bool rightLeft = false;
+  public static bool topBottom = false;
+  public static bool cameraFullLock = false;
+  public Transform player;   
+
+    private void Start(){
+        player = GameObject.Find("T'zargo").transform;
+        /*For some stupid reason you have to do this otherwise the camera locks on the Y-axis when moving scenes.
+        Don't touch if you like your sanity.*/
+        topBottom = false;
+        rightLeft = false;
+        }    
+
+    private void Update(){
+        //Freezes camera in top/bottom corner of map view:                
+        if (rightLeft & topBottom){
+            transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z); 
+            cameraFullLock = true;
+        } 
+        //Side lock:                        
+        if (rightLeft & !cameraFullLock){
+           transform.position = new Vector3(transform.position.x, player.transform.position.y, transform.position.z); 
+        } 
+        //Top lock:        
+        if (topBottom & !cameraFullLock){
+            transform.position = new Vector3(player.position.x, transform.position.y, transform.position.z);
+            }        
+        }
+    }
+
