@@ -1,0 +1,68 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class HealthManaStama : MonoBehaviour
+{   
+    //Health:
+    public int maxHp;
+    public int currentHp;
+    public int tempHp;
+    //Stamina:
+    public float maxStam;
+    public float currentStam;
+    public bool canRegainStamina = false;
+    //Mana:
+    public int maxMana;
+    public int currentMana;
+    //Sliders:
+    public Slider healthBar;
+    public Slider manaBar;
+    public Slider staminaBar;
+
+    //Methods:
+
+    //Health Methods:
+    public void TakeDamage(int damage){
+        currentHp -= damage;
+        healthBar.value = currentHp;        
+    }
+
+    public void Heal(int amount){
+        currentHp += amount;
+        if (currentHp > maxHp)
+            currentHp = maxHp;
+        healthBar.value = currentHp;
+    }
+    //Mana Methods:
+    public void ReduceMana(int amount){
+        currentMana -= amount;
+        manaBar.value = currentMana;
+    }
+
+    public void RestoreMana(int amount){
+        currentMana += amount;
+        if (currentMana > maxMana)
+            currentMana = maxMana;
+        manaBar.value = currentMana;
+    }
+    //Stamina Methods:
+    public void Tired(int amount){
+        currentStam -= amount;
+        staminaBar.value = currentStam;
+    }
+
+    public void RestoreStamina(float amount){
+        currentStam += amount;
+        if (currentStam > maxStam)
+            currentStam = maxStam;
+        staminaBar.value = currentStam;
+    }
+    public IEnumerator StaminaRegainTimer(float delay){
+        yield return new WaitForSeconds(delay);
+        canRegainStamina = true;
+
+    } 
+   
+}
