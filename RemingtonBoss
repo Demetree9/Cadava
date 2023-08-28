@@ -1,0 +1,96 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.AI;
+
+public class RemmingtonBoss : MonoBehaviour
+{
+  //Intantiated Classes:
+  public Timer timer;
+  public HealthManaStama healthManaStama;
+  //Animator:
+  public Animator anim;
+  //GameObjects:
+  public GameObject spellCastPoint;
+  public GameObject basicSpell;
+  public GameObject aOE;
+  public GameObject ad;
+  public GameObject crystal;
+  public GameObject spawnPointOne;
+  public GameObject spawnPointTwo;
+  //Player:
+  public Transform player;
+  public Vector2 playerPos;
+  public GameObject playerGamObj;
+  //Sprite Renderer: 
+private void Update(){
+  
+  if (timer.timesReset == 1){
+    timer.timesReset = 0;
+    int attackChoice = Random.Range(1,4);
+    if (attackChoice == 1)
+      RangeAttack();
+    else if (attackChoice == 2){
+      AOE();
+    }
+    else if(attackChoice == 3){
+      SummonAd();
+    }
+  if (healthManaStama.currentHp <= 400 & healthManaStama.currentHp >200){
+    timer.maxTime = 3f;
+  }
+  if (healthManaStama.currentHp <= 300){
+    timer.maxTime = 2f;
+  }
+  if (healthManaStama.currentHp <= 150)
+    timer.maxTime = 1.4f;
+  if (healthManaStama.currentHp <= 0){
+    Destroy(this.gameObject);
+  }
+
+  }
+}
+//Attacks:
+//Range:
+private void RangeAttack(){
+  anim.SetTrigger("attack");
+  StartCoroutine(RangeAttackDelay(.3f));
+}
+private IEnumerator RangeAttackDelay(float delay){
+        yield return new WaitForSeconds(delay);        
+      Instantiate(basicSpell, spellCastPoint.transform.position, Quaternion.identity);     
+            
+    }
+//AOE:
+private void AOE(){
+    anim.SetTrigger("attack");
+    StartCoroutine(AOEAttackDelay(.3f));
+}
+private IEnumerator AOEAttackDelay(float delay){
+        yield return new WaitForSeconds(delay);        
+      Instantiate(aOE, spellCastPoint.transform.position, player.rotation);      
+            
+    }
+//Summons:
+private void SummonAd(){
+    anim.SetTrigger("attack");
+    StartCoroutine(AdAttackDelay(.3f));
+}
+private IEnumerator AdAttackDelay(float delay){
+      yield return new WaitForSeconds(delay); 
+      int oneThroughThree = Random.Range(1,4);            
+      GameObject spawnedAd = Instantiate(ad, crystal.transform.position, spellCastPoint.transform.rotation) as GameObject;
+      ad.GetComponent<NavMeshAgent>().Warp(crystal.transform.position);
+      if (oneThroughThree == 2){
+        GameObject spawnedAdTwo = Instantiate(ad, spawnPointOne.transform.position, spellCastPoint.transform.rotation) as GameObject;
+        ad.GetComponent<NavMeshAgent>().Warp(spawnPointOne.transform.position); 
+        }               
+        else if (oneThroughThree == 3){
+            GameObject spawnedAdTwo = Instantiate(ad, spawnPointOne.transform.position, spellCastPoint.transform.rotation) as GameObject;
+            ad.GetComponent<NavMeshAgent>().Warp(spawnPointOne.transform.position); 
+            GameObject spawnedAdThree = Instantiate(ad, spawnPointTwo.transform.position, spellCastPoint.transform.rotation) as GameObject;
+            ad.GetComponent<NavMeshAgent>().Warp(spawnPointTwo.transform.position); 
+        }
+    }
+
+}
