@@ -1,0 +1,38 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GasCloud : MonoBehaviour
+{
+    private Rigidbody2D rb;    
+    public float speed;
+    private GameObject player;
+    [SerializeField] private Timer timer;
+    private bool atFive = false;  
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();        
+        rb.AddForce(new Vector2(speed, 0), ForceMode2D.Impulse);
+        player = PlayerManager.player1;
+    }
+    
+    void Update()
+    {        
+        if (timer.timesReset == 5 & !atFive){
+            rb.velocity = new Vector2(0,0);
+            rb.AddForce(new Vector2(-speed, 0), ForceMode2D.Impulse);
+            atFive = true;                       
+        }
+        if (timer.timesReset == 10){
+            rb.velocity = new Vector2(0,0);
+            rb.AddForce(new Vector2(speed, 0), ForceMode2D.Impulse);            
+            timer.timesReset = 0;
+            atFive = false;    
+
+        }
+        
+    }
+            
+
+}
