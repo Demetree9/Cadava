@@ -1,0 +1,222 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+// using Unity.Netcode;
+
+public class AtWillManager : MonoBehaviour
+{
+    public InventoryObject inventory;  
+    [SerializeField] private SpellManager spellManager;  
+    public Button panelOpenClose;
+    public GameObject menuPanel;
+    public GameObject lightningOrb;
+    public GameObject corrosiveSplatter;
+    public GameObject blindingBreath;  
+    public GameObject iceBarrage;
+    public GameObject fireBolt;
+    public GameObject spectralSword;
+    public GameObject firebolPict;    
+    //spawned button refs:     
+    private List<GameObject> spellButtons = new List<GameObject>();
+    private bool lightningOrbButton = false;
+    private bool corrosiveSplatterButton = false;
+    private bool blindingBreathButton = false;
+    private bool iceBarrageButton = false;
+    private bool spectralSwordButton = false;
+
+
+    private bool hovingOverUI = false;
+    private bool menuOpen = false;
+    private bool atWillOn = true;
+    public GameObject lightningOrbPic;
+    public GameObject corrosiveSplatterPic;
+    public GameObject blindingBreathPic;
+    public GameObject iceBarragePic;
+    public GameObject spectralSwordPic;
+    public bool inAtWillMenu = false;
+    //spell toggle bools:
+    public bool fireBoltActive = true;
+    public bool lightningOrbActive = false;
+    public bool corrosiveSplatterActive = false;
+    public bool blindingBreathActive = false;
+    public bool iceBarrageActive = false;
+    public bool spectralSwordActive = false;
+    
+    void Start()
+    {   
+          
+        panelOpenClose.onClick.AddListener(OpenMenu);
+        //Turns off firebolt at start because it is always active on the Prefab:
+        // firebolPict.SetActive(false);
+        //Not sure why this needs to be done...but you can't shoot when you change scenes without it.
+        inAtWillMenu = false;
+
+        if(fireBoltActive){            
+            EnableFireBolt();
+        }
+        // else if (spellManager.lightningOrbActive){
+        //     EnableLightningOrb();
+        // }   
+        // else if (spellManager.corrosiveSplatterActive){
+        //     EnableCorrosiveSplatter();
+        // }  
+        // else if (spellManager.blindingBreathActive){
+        //     EnableBlindingBreath();
+        // }   
+    }    
+
+    private void Update(){        
+
+        if (hovingOverUI & menuOpen & atWillOn){
+            ControllerDisable();
+        } 
+        else if (!hovingOverUI & menuOpen & atWillOn){
+            ControllerDisable();
+        }
+        else if (hovingOverUI & !menuOpen & atWillOn){
+            ControllerDisable();
+        }
+        else if (!hovingOverUI & !menuOpen & !atWillOn){
+            ControllerEnable();
+        }      
+        
+    }
+
+    public void OpenMenu(){  
+        menuPanel.SetActive(true);
+        menuOpen = true;        
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            //Lightning Orb:
+            if (inventory.Container.Items[i].ID == 2 && !lightningOrbButton){                
+                GameObject orb = Instantiate(lightningOrb, menuPanel.transform); 
+                // spawnedLightningOrb = orb;  
+                spellButtons.Add(orb);  
+                lightningOrbButton = true;                                     
+            }              
+            //Corrosive Splatter:
+            if (inventory.Container.Items[i].ID == 3 && !corrosiveSplatterButton){                
+                GameObject splat = Instantiate(corrosiveSplatter, menuPanel.transform); 
+                // spawnedCorrosiveSplatter = splat;      
+                spellButtons.Add(splat);     
+                corrosiveSplatterButton = true;    
+            }           
+            //Blidning Breath:
+            if (inventory.Container.Items[i].ID == 6 && !blindingBreathButton){                
+                GameObject bre = Instantiate(blindingBreath, menuPanel.transform);
+                // spawnedBlindingBreath = bre;  
+                spellButtons.Add(bre);   
+                blindingBreathButton = true;           
+            }   
+            //Ice Barrage:
+            if (inventory.Container.Items[i].ID == 7 && !iceBarrageButton) {
+                GameObject ice = Instantiate(iceBarrage, menuPanel.transform);
+                // spawnedBlindingBreath = bre;  
+                spellButtons.Add(ice);   
+                iceBarrageButton = true; 
+            }  
+            //SpectralSword:
+            if (inventory.Container.Items[i].ID == 8 & !spectralSwordButton)
+            {
+                GameObject spec = Instantiate(spectralSword, menuPanel.transform);
+                spellButtons.Add(spec);
+                spectralSwordButton = true;
+            }
+        }
+    }
+    public void CloseMenu(){
+        menuPanel.SetActive(false);
+        inAtWillMenu = false;
+        menuOpen = false;
+        ClearButtons();
+    }
+
+    public void DisableSpellDisplays(){
+        //Picture Clear:
+        lightningOrbPic.SetActive(false);
+        firebolPict.SetActive(false);
+        corrosiveSplatterPic.SetActive(false);
+        blindingBreathPic.SetActive(false);
+        iceBarragePic.SetActive(false);
+        spectralSwordPic.SetActive(false);
+        //Active Spell Reset:
+        lightningOrbActive = false;
+        fireBoltActive = false;
+        corrosiveSplatterActive = false;
+        blindingBreathActive = false;
+        iceBarrageActive = false;
+        spectralSwordActive = false;
+        //Display bool Reset:        
+
+        
+    }
+
+    public void EnableLightningOrb(){
+        lightningOrbPic.SetActive(true);
+        lightningOrbActive = true;
+    }
+    public void EnableFireBolt(){
+        firebolPict.SetActive(true);  
+        fireBoltActive = true;            
+    }
+
+    public void EnableCorrosiveSplatter(){        
+        corrosiveSplatterPic.SetActive(true);
+        corrosiveSplatterActive = true;
+    }
+    public void EnableBlindingBreath(){
+        blindingBreathPic.SetActive(true);
+        blindingBreathActive = true;
+    }
+
+    public void EnableSpectralSword(){
+        spectralSwordPic.SetActive(true);
+        spectralSwordActive = true;
+    }
+
+    public void EnableIceBarrage()
+    {
+        iceBarragePic.SetActive(true);
+        iceBarrageActive = true;
+    }
+    public void ControllerDisable(){        
+        atWillOn = false;        
+        inAtWillMenu = true;        
+    }
+    public void ControllerEnable(){        
+        atWillOn = true;        
+        inAtWillMenu = false;
+    }
+    public void OnHoverStart(){
+        hovingOverUI = true;        
+    }
+    public void OnHoverEnd(){
+        hovingOverUI = false;
+    }
+    private void ClearButtons(){
+        foreach (GameObject child in spellButtons){
+            Destroy(child);
+        }
+        blindingBreathButton = false;
+        corrosiveSplatterButton = false;
+        lightningOrbButton = false;
+        iceBarrageButton = false;
+        spectralSwordButton = false;
+        // if (spawnedBlindingBreath != null) Destroy(spawnedBlindingBreath);
+        // if (spawnedCorrosiveSplatter != null) Destroy(spawnedCorrosiveSplatter);
+        // if (spawnedIceBarrage != null) Destroy(spawnedIceBarrage);
+        // if (spawnedLightningOrb != null) Destroy(spawnedLightningOrb);
+    }
+
+    public void DisableMenuButton()
+    {
+        panelOpenClose.onClick.AddListener(CloseMenu);
+    }
+
+    public void EnableMenuButton()
+    {
+        panelOpenClose.onClick.AddListener(OpenMenu);
+    }
+
+}
