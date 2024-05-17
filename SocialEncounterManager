@@ -1,0 +1,554 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+
+public class SocialEncounterManager : MonoBehaviour
+{
+    [SerializeField] private GameObject arenaAssulter;
+    [SerializeField] private GameObject alchemyGuy;
+    [SerializeField] private GameObject spawnedArenaAssulter;
+    [SerializeField] private Transform arenaAssulterSpawn;
+    [SerializeField] private Sprite arenaAssulterImage;
+    [SerializeField] private Sprite bowManImage;
+    [SerializeField] private Sprite bedCamperImage;
+    [SerializeField] private Sprite alchemyGuyImage;
+    [SerializeField] private InventoryObject inventory;
+    [SerializeField] private Item copperItem;
+    [SerializeField] private GameObject bowMan;
+    [SerializeField] private GameObject bedCamper;
+    [SerializeField] private GameObject col;
+    [SerializeField] private GameObject toll;
+    [SerializeField] private List<Transform> spawnPoints;
+    [SerializeField] private List<Transform> bedSpawnPoints;
+    public static List<GameObject> spawnedNPCs = new();
+    public static bool bottomLeftBedCampers = false;
+    public List<GameObject> bottomLeftBedCamperList;
+    public List<GameObject> topLeftBedCamperList;
+    public List<GameObject> bottomRightBedCamperList;
+    public List<GameObject> activeBedTolls;
+    public static bool topLeftBedCampers = false;
+    public static bool bottomRightBedCampers = false;
+    public Bed bedBottomRight;
+    public Bed bedBottomLeft;
+    public Bed bedTopLeft;
+    public static bool talkedToAlchGuy = false;   
+    [SerializeField] private ChatDisplay chatDisplay;
+    void Start()
+    {
+        if (chatDisplay != null) return;
+        chatDisplay = GameObject.Find("Player 2(Clone)").GetComponentInChildren<ChatDisplay>(true);
+
+        //Resets Bed Campers Bool:
+        bottomLeftBedCampers = false;
+        topLeftBedCampers = false;
+        bottomRightBedCampers = false;        
+
+    }
+    
+
+    public void SocialEncounters()
+    {
+        if (chatDisplay == null) chatDisplay = GameObject.Find("Player 2(Clone)").GetComponentInChildren<ChatDisplay>(true);
+        col = GameObject.Find("Colliders");
+        toll = GameObject.Find("BedTollColliders");
+        bottomLeftBedCamperList = new();
+        bottomRightBedCamperList = new();
+        topLeftBedCamperList = new();
+        spawnedNPCs = new();
+        activeBedTolls = new();
+        if (spawnPoints.Count != 3) spawnPoints = RandomSpawnPointGetter();
+        ArenaAssulter();
+        SpawnBowMan();
+        SpawnBedCampers();
+        SpawnAlchemyGuy();
+        PortalToSlaveDistrict.shouldSocial = false;
+        
+    }
+    //ArenaAssulter: --------------------------------------------------------
+    public void ArenaAssulter()
+    {
+        int ran = Random.Range(0, 21);
+        if (ran >= 10)
+        {
+            spawnedArenaAssulter = Instantiate(arenaAssulter, arenaAssulterSpawn.position/* + new Vector3(0,1f,0)*/, Quaternion.identity, transform);
+            spawnedArenaAssulter.GetComponent<ASrenaAssulterAI>().isHostile = false;
+            chatDisplay.CanvasEnable();
+            chatDisplay.SetDisplay(arenaAssulterImage, "Give me all your copper! Or else...", "Yes", "No");
+            chatDisplay.topButton.onClick.AddListener(GiveCopper);
+            chatDisplay.middleButton.onClick.AddListener(MakeHostile);
+            PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;              
+        }
+    }
+
+    private void GiveCopper()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 4)
+            {
+                print("gavecopper");
+                inventory.Container.Items[i].amount = 0;
+                chatDisplay.CanvasDisable();
+                spawnedArenaAssulter.GetComponent<ASrenaAssulterAI>().LeaveToDurk();
+                spawnedArenaAssulter.GetComponent<ASrenaAssulterAI>().anim.SetTrigger("run");
+                return;
+            }
+        }
+        chatDisplay.dialouge.text = "Wait...You're poor!";
+        StartCoroutine(MakeHostileDelay(3f));
+
+    }
+    private void MakeHostile()
+    {
+        print("hostile");
+        spawnedArenaAssulter.GetComponent<ASrenaAssulterAI>().MakeHostile();
+        chatDisplay.CanvasDisable();
+    }
+    private IEnumerator MakeHostileDelay(float time)
+    {
+        yield return new WaitForSeconds(time);
+        spawnedArenaAssulter.GetComponent<ASrenaAssulterAI>().isHostile = true;
+        chatDisplay.CanvasDisable();
+    }
+
+    //Bow Man: -----------------------------------------------------------------------------------
+    private void SpawnBowMan()
+    {
+        print("RANDOWMAN");
+        int ran = Random.Range(0, 21);
+        if (ran >= 10)
+        {
+            Transform spot = RandomSpawnPoint();
+            GameObject spawn = Instantiate(bowMan, spot.position, Quaternion.identity, transform);
+            spawnedNPCs.Add(spawn);
+            spawnPoints.Remove(spot);
+        }
+    }
+    
+    public void BowMan()
+    {        
+            chatDisplay.CanvasEnable();
+            chatDisplay.SetDisplay(bowManImage, "Hey, could you...obtain a bow from someone and give it to me?", "Yes", "No");
+            chatDisplay.topButton.onClick.AddListener(AcceptBowOffer);
+            chatDisplay.middleButton.onClick.AddListener(DeclineBowOffer);
+            PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;        
+    }
+
+    public void BowManPayment()
+    {
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(bowManImage, "You got what I need?", "Yes", "No");
+        chatDisplay.topButton.onClick.AddListener(GiveBow);
+        chatDisplay.middleButton.onClick.AddListener(DeclineBowOffer);
+        PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;        
+    }
+
+    private void AcceptBowOffer()
+    {
+        chatDisplay.dialouge.text = "Good, good! I'll give you a copper for it. Go now!".ToString();
+        StartCoroutine(MenuCloseDelay(3f));
+    }
+
+    private void DeclineBowOffer()
+    {
+        chatDisplay.dialouge.text = "Well then get out of here!".ToString();
+        StartCoroutine(MenuCloseDelay(1f));
+    }
+
+    private void GiveBow()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 9)
+            {                
+                inventory.Container.Items[i].amount = 0;
+                chatDisplay.dialouge.text = "Thank you very much. Here's your payment";
+                inventory.AddItem(copperItem, 1);
+                StartCoroutine(MenuCloseDelay(2f));              
+                return;
+            }
+        }
+        chatDisplay.dialouge.text = "You don't have a bow ya dunce...";
+        StartCoroutine(MenuCloseDelay(2f));
+    }
+
+    //Bed Campers: ---------------------------------------------------------------
+    public List<Transform> BedSpawnPointSorter(int start, int end)
+    {
+        List<Transform> returnList = new();
+        for (int i = start; i < end; i++)
+        {
+            returnList.Add(bedSpawnPoints[i]);
+        }
+        return returnList;
+    }
+
+    public Transform BedSpawnPointGet()
+    {
+        int ran = Random.Range(0, bedSpawnPoints.Count);
+        return bedSpawnPoints[ran];
+    }
+
+    public void SpawnBedCampers()
+    {
+        int ran = Random.Range(1, 21);
+        int id = 0;        
+        if (ran >= 15)
+        {
+            //Spawns on all beds
+            foreach (Transform tran in BedSpawnPointSorter(0, 2))
+            {
+                GameObject spawn = Instantiate(bedCamper, tran.position, Quaternion.identity, transform);
+                spawnedNPCs.Add(spawn);
+                spawn.GetComponent<BedCamperAI>().bedCampId = id;
+                id += 1;
+                bottomRightBedCamperList.Add(spawn);
+                
+            }
+            foreach (Transform tran in BedSpawnPointSorter(2, 5))
+            {
+                GameObject spawn = Instantiate(bedCamper, tran.position, Quaternion.identity, transform);
+                spawnedNPCs.Add(spawn);
+                bottomLeftBedCamperList.Add(spawn);
+                spawn.GetComponent<BedCamperAI>().bedCampId = id;
+                id += 1;
+
+            }
+            foreach (Transform tran in BedSpawnPointSorter(5, 7))
+            {
+                GameObject spawn = Instantiate(bedCamper, tran.position, Quaternion.identity, transform);
+                spawnedNPCs.Add(spawn);
+                topLeftBedCamperList.Add(spawn);
+                spawn.GetComponent<BedCamperAI>().bedCampId = id;
+                id += 1;
+            }
+            bottomLeftBedCampers = true;
+            topLeftBedCampers = true;
+            bottomRightBedCampers = true;
+            BedTollActivate(0, 4);
+        }
+        else if (ran < 15 && ran >= 10)
+        {
+            foreach (Transform tran in BedSpawnPointSorter(0, 2))
+            {
+                GameObject spawn = Instantiate(bedCamper, tran.position, Quaternion.identity, transform);
+                spawnedNPCs.Add(spawn);
+                bottomRightBedCamperList.Add(spawn);
+                spawn.GetComponent<BedCamperAI>().bedCampId = id;
+                id += 1;
+            }
+            foreach (Transform tran in BedSpawnPointSorter(2, 5))
+            {
+                GameObject spawn = Instantiate(bedCamper, tran.position, Quaternion.identity, transform);
+                spawnedNPCs.Add(spawn);
+                bottomLeftBedCamperList.Add(spawn);
+                spawn.GetComponent<BedCamperAI>().bedCampId = id;
+                id += 1;
+            }
+            bottomLeftBedCampers = true;
+            bottomRightBedCampers = true;
+            BedTollActivate(0, 2);
+            BedTollActivate(3, 4);
+        }
+        else if (ran < 10 && ran >= 5)
+        {
+            foreach (Transform tran in BedSpawnPointSorter(5, 7))
+            {
+                GameObject spawn = Instantiate(bedCamper, tran.position, Quaternion.identity, transform);
+                spawnedNPCs.Add(spawn);
+                topLeftBedCamperList.Add(spawn);
+                spawn.GetComponent<BedCamperAI>().bedCampId = id;
+                id += 1;
+            }
+            topLeftBedCampers = true;
+            BedTollActivate(2, 3);
+        }        
+        BedSetter(col);
+    }
+
+    public void BedCamperThreat()
+    {
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(bedCamperImage, "You need to sleep? Pay a copper and I'll make sure nothing happens to you.", "Yes", "No");
+        chatDisplay.topButton.onClick.AddListener(GiveCopperBedCamper);
+        chatDisplay.middleButton.onClick.AddListener(DeclineBedCamperOffer);
+        PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;
+        
+    }
+
+    private void GiveCopperBedCamper()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 4 && inventory.Container.Items[i].amount >= 1)
+            {                
+                inventory.Container.Items[i].amount -= 1;
+                BedPayed();
+                chatDisplay.dialouge.text = "Pleasure doing business with you. I'll let my friends know you can sleep soundly tonight.";
+                StartCoroutine(MenuCloseDelay(2f));
+                return;
+            }
+        }
+        chatDisplay.dialouge.text = "Wait...You're poor!";
+        StartCoroutine(MenuCloseDelay(2f));
+
+    }   
+    
+    private void BedPayed()
+    {
+        if (bedBottomLeft != null)
+        {
+            bedBottomLeft.needToPayForBed = false;
+            Destroy(bedBottomLeft.bl);
+            Destroy(bedBottomLeft.bl1);
+            Destroy(bedBottomLeft.tl);
+            Destroy(bedBottomLeft.br);
+        }
+        if (bedBottomRight != null)
+        {
+            bedBottomRight.needToPayForBed = false;
+            Destroy(bedBottomRight.bl);
+            Destroy(bedBottomRight.bl1);
+            Destroy(bedBottomRight.tl);
+            Destroy(bedBottomRight.br);
+        }
+        if (bedTopLeft != null)
+        {
+            bedTopLeft.needToPayForBed = false;
+            Destroy(bedTopLeft.bl);
+            Destroy(bedTopLeft.bl1);
+            Destroy(bedTopLeft.tl);
+            Destroy(bedTopLeft.br);
+        }
+        activeBedTolls = new();
+        
+    }
+
+    private void BedSetter(GameObject bed)
+    {
+        Bed[] bedArray = bed.GetComponentsInChildren<Bed>();
+
+        if (bottomRightBedCampers)
+        {
+            bedBottomRight = bedArray[0];
+            bedBottomRight.needToPayForBed = true;
+        }
+        if (bottomLeftBedCampers)
+        {
+            bedBottomLeft = bedArray[1];
+            bedBottomLeft.needToPayForBed = true;
+        }
+        if (topLeftBedCampers)
+        {
+            bedTopLeft = bedArray[2];
+            bedTopLeft.needToPayForBed = true;
+        }        
+    }
+
+    private void DeclineBedCamperOffer()
+    {
+        chatDisplay.dialouge.text = "Well then no sleep for you. Get lost!";
+        StartCoroutine(MenuCloseDelay(1f));
+    }
+
+    public void BedTollActivate(int numStart, int numEnd)
+    {        
+        BedToll[] bedTollList;
+        bedTollList = toll.GetComponentsInChildren<BedToll>();
+        foreach (BedToll bed in bedTollList)
+        {
+            bed.TollActivate();           
+        }        
+    }
+
+    public void BedTollDeactivate(int numStart, int numEnd)
+    {
+        BedToll[] bedTollList;
+
+        bedTollList = toll.GetComponentsInChildren<BedToll>();
+        foreach (BedToll bed in bedTollList)
+        {
+            bed.tollActive = false;
+        }
+    }
+
+    public List<GameObject> BedCamperListReturn(GameObject camper)
+    {
+        foreach (GameObject person in bottomLeftBedCamperList)
+        {
+            if (person == null) continue;
+            if (person.GetComponent<BedCamperAI>().bedCampId ==
+                camper.GetComponent<BedCamperAI>().bedCampId)
+            {
+                BedTollDeactivate(0, 2);
+                return bottomLeftBedCamperList;
+            }
+                
+        }
+        foreach (GameObject person in topLeftBedCamperList)
+        {
+            if (person.GetComponent<BedCamperAI>().bedCampId ==
+                camper.GetComponent<BedCamperAI>().bedCampId)
+            {
+                BedTollDeactivate(2,3);
+                return topLeftBedCamperList;
+            }
+                
+        }
+        foreach (GameObject person in bottomRightBedCamperList)
+        {
+            if (person.GetComponent<BedCamperAI>().bedCampId ==
+                camper.GetComponent<BedCamperAI>().bedCampId)
+            {
+                BedTollDeactivate(3, 4);
+                return bottomRightBedCamperList;
+            }
+                
+        }
+        return null;
+
+    }
+
+    public bool IsBedCamperListEmpty(List<GameObject> testList)
+    {
+        //if paid for bed, then you can sleep. Needed because of the if statement that checks if you can sleep.
+        if (bedTopLeft == null || !bedTopLeft.needToPayForBed) return true;
+        else if (bedBottomRight == null | bedBottomLeft == null ||
+            !bedBottomLeft.needToPayForBed && !bedBottomRight.needToPayForBed) return true;
+        else if (!bedTopLeft.needToPayForBed && !bedBottomLeft.needToPayForBed && !bedBottomRight.needToPayForBed) return true;
+        foreach (GameObject person in testList)
+        {
+            if (person == null) continue;
+            else return false;
+        }
+        return true;
+    }
+
+    //Alchamy Guy: -----------------------------------------------------------------------------------
+    private void SpawnAlchemyGuy()
+    {
+        int ran = Random.Range(0, 21);
+        if (ran >= 10)
+        {
+            Transform spot = RandomSpawnPoint();
+            GameObject alGuy = Instantiate(alchemyGuy, spot.position, Quaternion.identity, transform);
+            spawnedNPCs.Add(alGuy);
+            spawnPoints.Remove(spot);
+        }
+        
+    }
+
+    public void AlchemyGuyFirstSpeach()
+    {
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(alchemyGuyImage, "Hey you, interested in any special potions?", "Yes", "No");
+        chatDisplay.topButton.onClick.AddListener(OpenShopOrTriggerSewerSpeach);
+        chatDisplay.middleButton.onClick.AddListener(DeclineAlchOffer);
+        PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;
+        
+    }
+
+    private void OpenShopOrTriggerSewerSpeach()
+    {
+        chatDisplay.RemoveListeners();
+        if (!talkedToAlchGuy)
+        {
+            chatDisplay.SetDisplay(alchemyGuyImage, "If you can get some ingrediants from the sewer, I'll make you whatever I can.", "Okay", "No");
+            chatDisplay.topButton.onClick.AddListener(MenuClose);
+            chatDisplay.middleButton.onClick.AddListener(DeclineAlchOffer);
+            talkedToAlchGuy = true;
+            
+        }        
+    }
+    
+
+    private void DeclineAlchOffer()
+    {
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(alchemyGuyImage, "Suit yourself", "...", "...");
+        StartCoroutine(MenuCloseDelay(1f));
+    }
+
+    // Utility: -----------------------------------------------------------------------
+    private IEnumerator MenuCloseDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        chatDisplay.CanvasDisable();
+        chatDisplay.RemoveListeners();
+    }  
+    
+    private void MenuClose()
+    {
+        chatDisplay.CanvasDisable();
+        chatDisplay.RemoveListeners();
+    }
+    
+    private Transform RandomSpawnPoint()
+    {
+        int ran = Random.Range(0, spawnPoints.Count);
+        return spawnPoints[ran];
+    }
+
+    public void DontDestorySpawnedNPCs()
+    {
+        foreach (GameObject npc in spawnedNPCs)
+        {
+            if (npc == null) continue;            
+            npc.SetActive(false);
+        }
+    }
+
+    public void ActivateSpawnedNPCs()
+    {
+        foreach (GameObject npc in spawnedNPCs)
+        {
+            if (npc == null) continue;
+            npc.SetActive(true);
+        }
+    }
+
+    public void DestroySpawnedNPCs()
+    {
+        foreach (GameObject npc in spawnedNPCs)
+        {
+            Destroy(npc);
+        }
+        foreach (GameObject npc in topLeftBedCamperList)
+        {
+            Destroy(npc);
+        }
+        foreach (GameObject npc in bottomLeftBedCamperList)
+        {
+            Destroy(npc);
+        }
+        foreach (GameObject npc in bottomRightBedCamperList)
+        {
+            Destroy(npc);
+        }
+    }
+
+    private List<Transform> RandomSpawnPointGetter()
+    {
+        GameObject spawnObj = GameObject.Find("RandomSpawnPoints");
+        Transform[] transList =  spawnObj.GetComponentsInChildren<Transform>();
+        List<Transform> returnList = new();
+        foreach (Transform tran in transList)
+        {
+            returnList.Add(tran);
+        }
+        return returnList;
+    }
+
+    
+
+    //Dev
+    public void SocialEncounterEnable()
+    {
+        /*ArenaAssulter();*/
+        SpawnBowMan();
+        SpawnBedCampers();
+        SpawnAlchemyGuy();
+    }
+}
