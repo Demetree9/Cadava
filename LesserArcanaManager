@@ -1,0 +1,196 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class LesserArcanaManager : MonoBehaviour
+{
+    public InventoryObject inventory;    
+    public Button panelOpenClose;
+    public GameObject menuPanel;
+    public GameObject razorIce;
+    public GameObject meteorBomb;
+    public GameObject holyHell;
+    public GameObject obliterate;    
+    
+    //spawned button refs:     
+    private List<GameObject> spellButtons = new List<GameObject>();
+    private bool razorIceButton = false;
+    private bool meteorBombButton = false;
+    private bool holyHellButton = false;
+    private bool obliterateButton = false;    
+
+
+    private bool hovingOverUI = false;
+    private bool menuOpen = false;
+    private bool lesserArcOn = true;
+    public GameObject razorIcePic;
+    public GameObject meteorBombPic;
+    public GameObject holyHellPic;
+    public GameObject obliteratePic;
+    
+    public bool inLesserArcMenu = false;
+    //spell toggle bools:
+    public bool razorIceActive = false;
+    public bool meteorBombActive = false;
+    public bool holyHellActive = false;
+    public bool obliterateActive = false;
+    void Start()
+    {
+        panelOpenClose.onClick.RemoveAllListeners();
+        panelOpenClose.onClick.AddListener(OpenMenu);
+    }
+
+    private void Update()
+    {
+
+        if (hovingOverUI & menuOpen & lesserArcOn)
+        {
+            ControllerDisable();
+        }
+        else if (!hovingOverUI & menuOpen & lesserArcOn)
+        {
+            ControllerDisable();
+        }
+        else if (hovingOverUI & !menuOpen & lesserArcOn)
+        {
+            ControllerDisable();
+        }
+        else if (!hovingOverUI & !menuOpen & !lesserArcOn)
+        {
+            ControllerEnable();
+        }
+
+    }
+    public void OpenMenu()
+    {
+        menuPanel.SetActive(true);
+        menuOpen = true;
+        inLesserArcMenu = true;
+        int counter = 0;
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            //Razor Ice:
+            if (inventory.Container.Items[i].ID == 21 && !razorIceButton)
+            {
+                GameObject orb = Instantiate(razorIce, menuPanel.transform);
+                // spawnedLightningOrb = orb;  
+                spellButtons.Add(orb);
+                razorIceButton = true;
+                counter += 1;
+            }
+            //Meteor Bomb:
+            if (inventory.Container.Items[i].ID == 20 && !meteorBombButton)
+            {
+                GameObject splat = Instantiate(meteorBomb, menuPanel.transform);
+                // spawnedCorrosiveSplatter = splat;      
+                spellButtons.Add(splat);
+                meteorBombActive = true;
+                counter += 1;
+            }
+            //Holy Hell:
+            if (inventory.Container.Items[i].ID == 22 && !holyHellButton)
+            {
+                GameObject bre = Instantiate(holyHell, menuPanel.transform);
+                // spawnedBlindingBreath = bre;  
+                spellButtons.Add(bre);
+                holyHellButton = true;
+                counter += 1;
+            }
+            //Obliterate
+            if (inventory.Container.Items[i].ID == 23 && !obliterateButton)
+            {
+                GameObject ice = Instantiate(obliterate, menuPanel.transform);
+                // spawnedBlindingBreath = bre;  
+                spellButtons.Add(ice);
+                obliterateButton = true;
+                counter += 1;
+            }            
+        }
+        if (counter == 0) CloseMenu();
+    }
+    public void CloseMenu()
+    {
+        menuPanel.SetActive(false);
+        inLesserArcMenu = false;
+        menuOpen = false;
+        ClearButtons();
+    }
+
+    public void DisableSpellDisplays()
+    {
+        //Picture Clear:
+        razorIcePic.SetActive(false);
+        meteorBombPic.SetActive(false);
+        holyHellPic.SetActive(false);
+        obliteratePic.SetActive(false);        
+        //Active Spell Reset:
+        razorIceActive = false;
+        meteorBombActive = false;
+        holyHellActive = false;
+        obliterateActive = false;
+    }
+
+    public void EnableRazorIce()
+    {
+        razorIcePic.SetActive(true);
+        razorIceActive = true;
+    }
+    public void EnableMeteorBomb()
+    {
+        meteorBombPic.SetActive(true);
+        meteorBombActive = true;
+    }
+
+    public void EnableHolyHell()
+    {
+        holyHellPic.SetActive(true);
+        holyHellActive = true;
+    }
+    public void EnableObliterate()
+    {
+        obliteratePic.SetActive(true);
+        obliterateActive = true;
+    }
+    public void ControllerEnable()
+    {
+        lesserArcOn = true;
+        inLesserArcMenu = false;
+        print("contorllerenable");
+    }
+    public void ControllerDisable()
+    {
+        lesserArcOn = false;
+        inLesserArcMenu = true;                
+    }
+    
+    public void OnHoverStart()
+    {
+        hovingOverUI = true;
+    }
+    public void OnHoverEnd()
+    {
+        hovingOverUI = false;
+    }
+    private void ClearButtons()
+    {
+        foreach (GameObject child in spellButtons)
+        {
+            Destroy(child);
+        }
+        razorIceButton = false;
+        meteorBombButton = false;
+        holyHellButton = false;
+        obliterateButton = false;        
+    }
+
+    public void DisableMenuButton()
+    {
+        panelOpenClose.onClick.AddListener(CloseMenu);
+    }
+
+    public void EnableMenuButton()
+    {
+        panelOpenClose.onClick.AddListener(OpenMenu);
+    }
+}
