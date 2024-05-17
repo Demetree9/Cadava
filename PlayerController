@@ -1,163 +1,717 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
 
 public class PlayerController : MonoBehaviour
 {
     //Instantiated Classes:
     public HealthManaStama healthManaStama;
     public Timer staminaTimer;
+    [SerializeField] private Timer manaTimer;
+    [SerializeField] private LocationManager locationManager;
+    public AtWillManager atWillManager;    
+    public LesserArcanaManager lesserArcanaManager;    
     //Speed References:
     public Vector3 newVelocity;
     private float speed = 3f;    
     [SerializeField] private Rigidbody2D rigbod;
     [SerializeField] private Rigidbody2D camRB;
-    public GameObject cameraObj;
-    public Transform camera;
+    public GameObject cameraObj;    
     public Transform player;
+    public Animator anim;    
+    private bool isRunning = false;
+    private bool flippedRight = true;    
     //Dodge Bools:
     public bool cameraLocked = false;
-    public static bool isDodging = false;
-    public bool canDodge = true;
-    //Color and Sprite Renderer:
-    public SpriteRenderer spriteRen;
-    public Color color;
-    public Color staringColor;
+    public bool isDodging = false;
+    public bool canDodge = true; 
+    private bool unlimitedStamina = false;
+    public static Color hairColor;
+    [SerializeField] private List <SpriteRenderer> characterParts;
+    [SerializeField] private SpriteRenderer characterHead;
+    [SerializeField] private SpriteRenderer characterLeftArm;
+    [SerializeField] private SpriteRenderer characterRightArm;
+    [SerializeField] private SpriteRenderer characterHair;
+    
+    //Menu References:
+    public bool menuOpen = false;   
+    public GameObject canvas; 
     //Spell References:
     public GameObject spellSpawn;
     public GameObject fireBolt;
+    [SerializeField] private GameObject fireBoltFX;
+    [SerializeField] private GameObject corrosiveSplatterFX;
+    [SerializeField] private GameObject iceBarrageFX;
+    [SerializeField] private GameObject blindingBreathFX;
+    [SerializeField] private GameObject spectralSwordFX;
+    public GameObject lightningOrb;    
+    [SerializeField] private GameObject iceBarrage;
+    [SerializeField] private GameObject lightningOrbFX;
+    [SerializeField] private GameObject spectralSword;
+    [SerializeField] private GameObject meteorBomb;
+    [SerializeField] private GameObject razorIce;
+    [SerializeField] private GameObject holyHell;
+    [SerializeField] private GameObject obliterate;
+    private GameObject spawnedObl;
+    public Vector3 rotation;     
+    public GameObject corrosiveSplatter;
     public Transform spellSpawnPos;
+    [SerializeField] private GameObject blindingBreath;    
     public bool canBasicAttack = true;
+    public bool canMove = true;
+    private bool canCorrosiveAttack = true;
+    private bool canBlindingBreath = true;
+    private bool canIceBarrage = true;
+    private bool canSpectralSword = true;
+    private bool canMeteorBomb = true;
+    private bool canRazorIce = true;
+    private bool canHolyHell = true;
+    private bool canObliterateManaDrain = true;
+    private bool obliterateSpawned = false;
+    public bool pressedTab = false;
+    public static bool inSlaveDistrict = true;
+    public bool alive = false;
+    private bool isIdle = true;
     //Damage Color:
-    public static int healthCheck;
-    //Gets starting color:
-    private void Start(){
-        staringColor = GetComponent<SpriteRenderer>().color;
-        spellSpawnPos = spellSpawn.GetComponent<SpriteRenderer>().transform;
-        healthCheck = healthManaStama.currentHp;
-    }
+    public int healthCheck;
+    //Sound Lists:
+    [SerializeField] private List <AudioClip> fireBoltSounds;
+    [SerializeField] private List <AudioClip> lightningOrbSounds;
+    [SerializeField] private List <AudioClip> corrosiveSplatterSounds;    
+    [SerializeField] private List <AudioClip> iceBarrageSounds;    
+    //Sounds:
+    [SerializeField] private AudioClip lightningOrbChargeSound;    
+    [SerializeField] private AudioClip dodgeSound1;
+    private AudioSource src;
+    //Extra:
+    public bool beingPushed = false;
+    [SerializeField] private GameObject deathCanvas;
+    public Camera camera;
+    [SerializeField] private AudioListener audioListener;
+    [SerializeField] private GameObject characterCreatorObj;
+    [SerializeField] private GameObject buttonWindow;
+    [SerializeField] private GameObject bankDisplay;
+    public static bool justCreated = true;
 
-    private void Awake(){
-        healthCheck = healthManaStama.maxHp;
-    }
+    //Gets starting color:
+    private void Start()
+    {
+        healthManaStama = GetComponent<HealthManaStama>();        
+        src = GetComponent<AudioSource>();
+        anim.SetTrigger("idle");
+        if (SceneManager.GetActiveScene() != SceneManager.GetSceneByName("Tutorial"))
+        {
+            CameraAdjust(2f);
+            justCreated = true;
+        }
+        else
+        {
+            characterCreatorObj.SetActive(false);
+            justCreated = false;
+        }
+        
+
+        // atWillManager = GetComponentInChildren<AtWillManager>();     
+        // spellManager = GetComponentInChildren<SpellManager>();  
+
+        camera = GetComponentInChildren<Camera>();
+
+        GameObject lobbyUI = GameObject.Find("LobbyCreated");
+        // if(lobbyUI != null) lobbyUI.SetActive(false);
+        PlayerManager.AssignPlayer(this.gameObject);
+
+        if (DifficultyManager.easyMode)
+        {
+            healthManaStama.SetMaxHealth(200);
+            healthCheck = healthManaStama.maxHp;
+        }
+        else if (DifficultyManager.normalMode)
+        {
+            healthManaStama.SetMaxHealth(100);
+            healthCheck = healthManaStama.maxHp;
+        }
+        else
+        {
+            healthCheck = healthManaStama.maxHp;
+        }
+
+        hairColor = new Color(1, 1, 1, 1);
+    }    
+    
+    
 
     void Update()
-    {
+    {            
+        if (!menuOpen && canMove && !beingPushed && !justCreated){
         //Movement:
         //Dodge:
         if (Input.GetKeyDown(KeyCode.Space) & !isDodging & canDodge & healthManaStama.currentStam >= 25){ 
+            DodgeSound();
             isDodging = true; 
             canDodge = false;
             healthManaStama.canRegainStamina = false;
-            if(isDodging)          
+            /*if(isDodging) */         
                 Dodge();
-                StartCoroutine(DodgeReset(.3f));
+                StartCoroutine(DodgeReset(.5f));
                 StartCoroutine(DodgeCoolDown(1));
                 StartCoroutine(healthManaStama.StaminaRegainTimer(5f));                
         }
         //Basic ass movement:
-        else if (!isDodging) {
+        else if (!isDodging & flippedRight) {
+            newVelocity.x = Input.GetAxis("Horizontal") * speed;
+            newVelocity.y = -Input.GetAxis("Vertical") * speed;
+            rigbod.velocity = transform.TransformDirection(-newVelocity);                      
+        }
+        else if (!isDodging && !flippedRight){
             newVelocity.x = Input.GetAxis("Horizontal") * speed;
             newVelocity.y = Input.GetAxis("Vertical") * speed;
-            rigbod.velocity = transform.TransformDirection(newVelocity);
+            rigbod.velocity = transform.TransformDirection(newVelocity);            
         }
-        //Flips Sprite based on Movement:
-        if (newVelocity.x < 0)
-            spriteRen.flipX = false;
-        else if (newVelocity.x > 0)
-            spriteRen.flipX = true;          
+        }
+        else if (beingPushed){            
+            return;
+        }
+        else if (!isIdle) {
+            rigbod.velocity = new Vector3(0,0,0);            
+            anim.ResetTrigger("run");
+            anim.SetTrigger("idle");
+            isIdle = true;
+
+        }        
+        //Menu Logic:
+        if (Input.GetKeyDown(KeyCode.Tab) && !menuOpen && !justCreated){
+            MenuOpen();
+        }
+        else if (Input.GetKeyDown(KeyCode.Tab) && menuOpen && !justCreated)
+        {
+            MenuClose();
+        }     
+                     
         //Camera Gameobject Follow:
         if (!cameraLocked)
         cameraObj.transform.position = Vector3.MoveTowards(cameraObj.transform.position, player.transform.position, .8f);  
         //Spell FIre:
         //Basic Bolt:
-        if (Input.GetKey(KeyCode.Mouse0) & canBasicAttack){
-            Shoot();
-            canBasicAttack = false;
-            StartCoroutine(BasicAttackCoolDown(.5f));
-        }  
+        if (Input.GetKey(KeyCode.Mouse0) && !menuOpen && !justCreated){
+            ShootAtWill();  
+        }
+        //Lesser Arcana:
+        if (Input.GetKeyDown(KeyCode.Mouse1) && !lesserArcanaManager.inLesserArcMenu)
+        {
+            ShootLesserArcana();
+        }
+        if (lesserArcanaManager.obliterateActive && Input.GetKey(KeyCode.Mouse1))
+        {
+            ShootLesserArcana();            
+        }
+        if (lesserArcanaManager.obliterateActive && Input.GetKeyUp(KeyCode.Mouse1) || healthManaStama.currentMana <= 5)
+        {
+            ObliterateReset();
+        }
+        //Destroys 
+        //Lightning Orb Charge Sound:
+        if (atWillManager.lightningOrbActive && Input.GetKeyDown(KeyCode.Mouse0) & !atWillManager.inAtWillMenu)
+            LightningOrbCharge();
         //Stamina Regain:
-        if (staminaTimer.timesReset == 1 & healthManaStama.canRegainStamina){
-            healthManaStama.RestoreStamina(.05f);
-        }   
+        if (staminaTimer.timesReset >= 1 & healthManaStama.canRegainStamina){
+            healthManaStama.RestoreStamina(20f * Time.deltaTime);
+        } 
+        //Mana Regain:
+        if (healthManaStama.currentMana != healthManaStama.maxMana && manaTimer.timesReset >= 1)
+        {
+            healthManaStama.RestoreMana(1);
+            manaTimer.timesReset = 0;
+        }
         //Damage Color:
-        if (healthManaStama.currentHp != healthCheck){
+        if (healthManaStama.currentHp != healthCheck && !BugTowerButton.bugTower){
             DamageColor();
             healthCheck = healthManaStama.currentHp;            
         }
-    }
-    //Camera Map Corner Lock:       
-    private void OnTriggerEnter2D(Collider2D col){
-        if (col.gameObject.tag == "RightLeft"){           
-            camera.parent = null;
-            CameraFreeze.rightLeft = true;            
-            cameraLocked = true;
+        if (healthManaStama.currentHp <= 0 & canMove){
+            Die();
         }
-        else if (col.gameObject.tag == "TopBottom"){
-            camera.parent = null;
-            CameraFreeze.topBottom = true;            
-            cameraLocked = true;
-        }  
+    }
+
+    
+    private void FixedUpdate(){        
+        //Flips Sprite based on Movement:
+        if (newVelocity.x < 0){
+            FlipLeft();   
+            anim.SetTrigger("run");
+            isIdle = false;
+            // if (IsHost && !isRunning){
+            //     RunClientRpc();
+            //     isRunning = true; 
+            //     netAni.SetTrigger("run");
+            // }        
+        }
+            // spriteRen.flipX = false;
+        else if (newVelocity.x > 0){            
+            FlipRight();       
+            anim.SetTrigger("run");
+            isIdle = false;
+            // if (IsHost && !isRunning){
+            //     RunClientRpc();
+            //     isRunning = true; 
+            //     netAni.SetTrigger("run");
+            // }       
+        }
+        else if (newVelocity.y != 0){
+            anim.SetTrigger("run");
+            isIdle = false;
+            // if (IsHost && !isRunning){
+            //     RunClientRpc();
+            //     isRunning = true; 
+            //     netAni.SetTrigger("run");
+            // }  
+
+        }
+        else {
+            anim.SetTrigger("idle");            
+            // isRunning = false;
+        }
+    }
+
         
-    }
-    //Detects if Camera should be Locked:
-    private void OnTriggerExit2D(Collider2D col){        
-        if(col.gameObject.tag =="RightLeft"){
-            CameraFreeze.rightLeft = false;
-            CameraFreeze.cameraFullLock = false;
-            if (!CameraFreeze.rightLeft & !CameraFreeze.topBottom){
-                camera.SetParent(player);
-                cameraLocked = false;               
-            }            
-        }        
-        if(col.gameObject.tag =="TopBottom" ){
-            CameraFreeze.topBottom = false;
-            CameraFreeze.cameraFullLock = false;
-            if (!CameraFreeze.rightLeft & !CameraFreeze.topBottom){
-            camera.SetParent(player);
-            cameraLocked = false;
-            }
-        }
-    }
     //Dodge:
     private void Dodge(){
-        rigbod.velocity = transform.TransformDirection(newVelocity *2);
-        spriteRen.color = new Color(1,1,1,.3f);
-        healthManaStama.Tired(25);
+        anim.SetTrigger("roll");        
+        isRunning = true;        
+        if (flippedRight) {
+            newVelocity.x = Input.GetAxis("Horizontal") * speed;
+            newVelocity.y = -Input.GetAxis("Vertical") * speed;
+            rigbod.velocity = transform.TransformDirection(-newVelocity * 2);            
+        }
+        else if (!flippedRight){
+            newVelocity.x = Input.GetAxis("Horizontal") * speed;
+            newVelocity.y = Input.GetAxis("Vertical") * speed;
+            rigbod.velocity = transform.TransformDirection(newVelocity * 2);
+        } 
+        if (!unlimitedStamina) healthManaStama.Tired(25);
         staminaTimer.TimerReset();
+        if (!BugTowerButton.bugTower) DodgeColorChange();
+    }
+    private void DodgeSound(){
+        src.clip = dodgeSound1;
+        src.Play();
     }
     //Dodge Reset:
     private IEnumerator DodgeReset(float delay){
-        yield return new WaitForSeconds(delay);
-        spriteRen.color = staringColor; 
+        yield return new WaitForSeconds(delay);        
         isDodging = false;
+        if (!BugTowerButton.bugTower) DodgeColorRevert();
+        anim.SetTrigger("idle");
+        isRunning = false;
     }
     //Sets a time so you can't dodge every .3 seconds like a madman.
     private IEnumerator DodgeCoolDown(float delay){
         yield return new WaitForSeconds(delay);
         canDodge = true;        
     }
-    //Spell Shooting
-    private void Shoot(){
-        GameObject spell = Instantiate(fireBolt, spellSpawnPos.position, spellSpawn.transform.rotation);
-        Destroy(spell, 2);        
-        Rigidbody2D rb = spell.GetComponent<Rigidbody2D>();
-        rb.AddForce(spellSpawnPos.up * 6f, ForceMode2D.Impulse);
+
+    private void DodgeColorChange(){
+        for (int i = 0; i < characterParts.Count; i++)
+        {
+            characterParts[i].color = new Color(1,1,1,.3f);
+        }
+        characterHead.color = new Color(0.735849f, 0.735849f, 0.735849f, .3f);
+         
     }
+    private void DodgeColorRevert(){
+        for (int i = 0; i < characterParts.Count; i++)
+        {
+            characterParts[i].color = new Color(1,1,1,1);
+        }
+        characterHead.color = new Color(0.735849f, 0.735849f, 0.735849f, 1);
+        characterLeftArm.color = new Color(0.735849f, 0.735849f, 0.735849f, 1);
+        characterRightArm.color = new Color(0.735849f, 0.735849f, 0.735849f, 1);
+        characterHair.color = hairColor;
+    }
+    //Spell Shooting
+    
+    private void ShootAtWill(){        
+        if (!atWillManager.inAtWillMenu && !lesserArcanaManager.inLesserArcMenu)
+        {
+            //Firebolt:
+            if (atWillManager.fireBoltActive && canBasicAttack){                
+                    anim.SetTrigger("attack"); 
+                    // netAni.SetTrigger("attack");                   
+                    canBasicAttack = false;
+                    StartCoroutine(BasicAttackCoolDown(.5f));
+                    FireBoltSound();
+                    GameObject spell = Instantiate(fireBolt, spellSpawnPos.position, spellSpawn.transform.rotation);            
+                    Destroy(spell, 2);        
+                    Rigidbody2D rb = spell.GetComponent<Rigidbody2D>();
+                    rb.AddForce(spellSpawnPos.up * 6f, ForceMode2D.Impulse);
+                    GameObject fx = Instantiate(fireBoltFX, spell.transform.position, spell.transform.rotation);
+                    fx.GetComponent<SpellFX>().FollowThisObject(spell, .5f);
+            }
+            //Lightning Orb:            
+            else if (atWillManager.lightningOrbActive && canBasicAttack){                
+                    canMove = false; 
+                    canBasicAttack = false;           
+                    Rigidbody2D self = GetComponent<Rigidbody2D>();
+                    self.velocity = new Vector3(0,0,0);
+                    StartCoroutine(LightningOrbDelay(.5f));                           
+            }
+            //Corrosive Splatter:
+            else if (atWillManager.corrosiveSplatterActive & canCorrosiveAttack){                
+                    CorrosiveSplatterSound();
+                    canCorrosiveAttack = false;
+                    GameObject spell = Instantiate(corrosiveSplatter, spellSpawnPos.position, spellSpawn.transform.rotation);
+                GameObject fx = Instantiate(corrosiveSplatterFX, spellSpawnPos.position, spellSpawn.transform.rotation);
+                fx.GetComponent<SpellFX>().FollowThisObject(spell, .5f);
+                    Destroy(spell, 2);        
+                    Rigidbody2D rb = spell.GetComponent<Rigidbody2D>();
+                    rb.AddForce(spellSpawnPos.up * 12f, ForceMode2D.Impulse);
+                    StartCoroutine(BasiCorrosiveCoolDown(2f));
+                    anim.SetTrigger("attack");            
+            }
+            else if (atWillManager.blindingBreathActive & canBlindingBreath){
+                
+                    GameObject spell = Instantiate(blindingBreath, spellSpawnPos.position, spellSpawn.transform.rotation);
+                GameObject fx = Instantiate(blindingBreathFX, spellSpawnPos.position, spellSpawn.transform.rotation);
+                fx.GetComponent<SpellFX>().FollowThisObject(spell, 5f);
+                canBlindingBreath = false;
+                    StartCoroutine(BlindingBreathReset(1.5f));         
+                    anim.SetTrigger("attack");                     
+                
+            }
+            else if (atWillManager.iceBarrageActive & canIceBarrage){                
+                    GameObject spell = Instantiate(iceBarrage, spellSpawnPos.position, spellSpawn.transform.rotation);
+                    GameObject fx = Instantiate(iceBarrageFX, spellSpawnPos.position, spellSpawn.transform.rotation);
+                    fx.GetComponent<SpellFX>().FollowThisObject(spell, .2f);
+                    Rigidbody2D rb = spell.GetComponent<Rigidbody2D>();
+                    rb.AddForce(spellSpawnPos.up * 12f, ForceMode2D.Impulse);
+                    canIceBarrage = false;                    
+                    StartCoroutine(IceBarrageCooldown(.25f));
+                    anim.SetTrigger("attack");                     
+                    Destroy(spell, 3f);               
+                }
+            else if (atWillManager.spectralSwordActive && canSpectralSword)
+            {
+                GameObject spell = Instantiate(spectralSword, spellSpawnPos.position + new Vector3(0,.5f, 0), spellSpawn.transform.rotation);                
+                GameObject fx = Instantiate(spectralSwordFX, spellSpawnPos.position + new Vector3(0,.5f, 0), spellSpawn.transform.rotation);
+                fx.GetComponent<SpellFX>().FollowThisObject(spell, .5f);
+                canSpectralSword = false;
+                StartCoroutine(SpectralSwordCooldown(1.2f));
+            }
+        }
+    } 
+    
+    private void ShootLesserArcana()
+    {
+        if (lesserArcanaManager.meteorBombActive && canMeteorBomb && healthManaStama.currentMana >= 33)
+        {
+            GameObject spell = Instantiate(meteorBomb, spellSpawnPos.position, spellSpawn.transform.rotation);
+            Rigidbody2D rb = spell.GetComponent<Rigidbody2D>();
+            rb.AddForce(spellSpawnPos.up * 6f, ForceMode2D.Impulse);
+            canMeteorBomb = false;
+            StartCoroutine(MeteorBombCooldown(3f));
+            anim.SetTrigger("attack");
+            healthManaStama.ReduceMana(33);
+            Destroy(spell, 4f);
+        }
+        else if (lesserArcanaManager.razorIceActive && canRazorIce && healthManaStama.currentMana >= 25)
+        {
+            GameObject spell = Instantiate(razorIce, Camera.main.ScreenToWorldPoint(Input.mousePosition), spellSpawn.transform.rotation);           
+            canRazorIce = false;
+            StartCoroutine(RazorIceCooldown(11f));
+            anim.SetTrigger("attack");
+            healthManaStama.ReduceMana(25);
+            Destroy(spell, 10f);
+        }
+        else if (lesserArcanaManager.holyHellActive && canHolyHell & healthManaStama.currentMana >= 25)
+        {
+            GameObject spell = Instantiate(holyHell, Camera.main.ScreenToWorldPoint(Input.mousePosition) + new Vector3(0,0,5f), spellSpawn.transform.rotation);
+            canHolyHell = false;
+            StartCoroutine(HolyHellCooldown(5f));
+            anim.SetTrigger("attack");
+            healthManaStama.ReduceMana(25);            
+        }
+        else if (lesserArcanaManager.obliterateActive && healthManaStama.currentMana >= 5)
+        {
+            if (!obliterateSpawned)
+            {
+                spawnedObl = Instantiate(obliterate, spellSpawnPos.position, spellSpawnPos.rotation);
+                obliterateSpawned = true;
+            }
+            
+            if (canObliterateManaDrain)
+            {
+                healthManaStama.ReduceMana(2);
+                StartCoroutine(ObliterateManaCooldown(.2f));
+                canObliterateManaDrain = false;
+            }          
+            
+        }
+    }
+
+    private void ObliterateReset()
+    {
+        if (spawnedObl != null)
+        {
+            obliterateSpawned = false;
+            Destroy(spawnedObl);
+            spawnedObl = null;
+        }
+        
+    }
+    
+    //FireBolt:
+    private void FireBoltSound(){
+        int zeroToTwo = Random.Range(0,3);
+        src.clip = fireBoltSounds[zeroToTwo];
+        src.Play();
+    }
+    //Fires Lighting Orb after half second warmup:
+    private IEnumerator LightningOrbDelay(float delay){
+        yield return new WaitForSeconds(delay);
+        StartCoroutine(BasicAttackCoolDown(.5f));
+        LightningOrbSound();          
+        GameObject spell = Instantiate(lightningOrb, spellSpawnPos.position, spellSpawn.transform.rotation);
+        GameObject fx = Instantiate(lightningOrbFX, spellSpawnPos.position, spellSpawn.transform.rotation);
+        fx.GetComponent<SpellFX>().FollowThisObject(spell, .5f);
+        spell.transform.Rotate(rotation);
+        Destroy(spell, 4);        
+        Rigidbody2D rb = spell.GetComponent<Rigidbody2D>();
+        rb.AddForce(spellSpawnPos.up * 3f, ForceMode2D.Impulse);
+        canMove = true; 
+        canBasicAttack = true;
+        anim.SetTrigger("attack");        
+    }   
+    
+    private void LightningOrbCharge(){
+        src.clip = lightningOrbChargeSound;
+        src.Play();
+    }
+    private void LightningOrbSound(){
+        int zeroToTwo = Random.Range(0,3);
+        src.clip = lightningOrbSounds[zeroToTwo];
+        src.Play();
+    }    
+
+    //Corrosive Spatter:
+    private IEnumerator BasiCorrosiveCoolDown(float delay){
+        yield return new WaitForSeconds(delay);
+        canCorrosiveAttack = true;        
+    }
+    private void CorrosiveSplatterSound(){
+        int zeroToTwo = Random.Range(0,3);
+        src.clip = corrosiveSplatterSounds[zeroToTwo];
+        src.Play();
+    }
+    //Blinding Breath:
+    private IEnumerator BlindingBreathReset(float delay){
+        yield return new WaitForSeconds(delay);
+        canBlindingBreath = true;        
+    }
+    //Attack Cooldown:
     private IEnumerator BasicAttackCoolDown(float delay){
         yield return new WaitForSeconds(delay);
-        canBasicAttack = true;        
+        canBasicAttack = true;               
+    }
+
+    //Ice Barrage:
+    private IEnumerator IceBarrageCooldown(float delay){
+        yield return new WaitForSeconds(delay);
+        canIceBarrage = true;        
+    }    
+    //SpectralSword:
+    private IEnumerator SpectralSwordCooldown(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        canSpectralSword = true;
+    }
+
+    private IEnumerator MeteorBombCooldown(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        canMeteorBomb = true;
+    }
+    private IEnumerator RazorIceCooldown(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        canRazorIce = true;
+    }
+    private IEnumerator HolyHellCooldown(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        canHolyHell = true;
+    }
+    private IEnumerator ObliterateManaCooldown(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        canObliterateManaDrain = true;
     }
     //Damage color logic:
-    private void DamageColor(){        
-        spriteRen.color = new Color(1, 0, 0, 1);
+    private void DamageColor(){          
         StartCoroutine(DamageColorRevert(.5f));
+        for (int i = 0; i < characterParts.Count; i++)
+        {
+            characterParts[i].color = new Color(1,0,0,1);
+        }
+            characterHead.color = new Color(1,0,0,1);
     }
 
     private IEnumerator DamageColorRevert(float delay){
-        yield return new WaitForSeconds(delay);
-        spriteRen.color = staringColor;       
+        yield return new WaitForSeconds(delay); 
+        for (int i = 0; i < characterParts.Count; i++)
+        {
+            characterParts[i].color = new Color(1,1,1,1);
+        }
+            characterHead.color = new Color(0.735849f, 0.735849f, 0.735849f, 1);
+            characterLeftArm.color = new Color(0.735849f, 0.735849f, 0.735849f, 1);
+            characterRightArm.color = new Color(0.735849f, 0.735849f, 0.735849f, 1);
+            characterHair.color = hairColor;
     }
+
+    public void ColorChange()
+    {        
+        for (int i = 0; i < characterParts.Count; i++)
+        {
+            characterParts[i].color = new Color(1, 1, 1, 1);
+        }
+        characterHead.color = new Color(0.735849f, 0.735849f, 0.735849f, 1);
+    }
+
+    public void ColorChange(Color color)
+    {
+        for (int i = 0; i < characterParts.Count; i++)
+        {
+            characterParts[i].color = color;
+        }
+        characterHead.color = color;
+    }
+    //Utility:
+    public void CameraAdjust(float zoom){
+        camera.orthographicSize = zoom;
+    }
+
+    //Menu logic:
+    public void MenuOpen(){
+        menuOpen = true;
+        canvas.SetActive(true);
+        rigbod.velocity = new Vector3(0,0,0);
+        pressedTab = true;
+    }
+    public void MenuClose(){
+        menuOpen = false;
+        canvas.SetActive(false);
+        pressedTab = false;
+    }
+
+    //character flip:
+    private void FlipLeft(){        
+        this.transform.rotation = Quaternion.Euler(new Vector3(0f, 0f, 0f));    
+        cameraObj.transform.rotation = Quaternion.identity; 
+        flippedRight = false;         
+    }
+    private void FlipRight(){
+        this.transform.rotation = Quaternion.Euler(new Vector3(0f, 180f, 0f));   
+        cameraObj.transform.rotation = Quaternion.identity; 
+        flippedRight = true;                       
+    }
+    public void Resurrect(){
+        deathCanvas.SetActive(false);
+        canMove = true;
+        atWillManager.inAtWillMenu = false;
+        this.gameObject.SetActive(false);
+        anim.ResetTrigger("die");
+    }
+
+    public void ResetPlayer()
+    {        
+        characterCreatorObj.SetActive(true);
+        healthManaStama.currentHp = healthManaStama.maxHp;
+        healthManaStama.TakeDamage(0);
+    }
+
+    //Fall Logic:
+    public void Fall(Vector3 start)
+    {
+        if (canMove == true) StartCoroutine(FallReset(1f, start));
+        canMove = false;        
+        transform.localScale -= new Vector3(5f, 5f, 5f) * Time.deltaTime;
+    }
+
+    private IEnumerator FallReset(float time, Vector3 start)
+    {
+        yield return new WaitForSeconds(time);
+        transform.localScale = new Vector3(.84f, .84f, .84f);
+        transform.position = start;
+        canMove = true;
+        healthManaStama.TakeDamage(10);
+    }
+
+    public AtWillManager GetAtWill(GameObject player)
+    {        
+        Transform[] children = player.GetComponentsInChildren<Transform>();
+        foreach (Transform child in children)
+        {
+            if (child.name == "HUD")
+            {                
+                Transform buttWin = child.GetComponentInChildren<Transform>();
+                Transform[] buttWinArray = buttWin.GetComponentsInChildren<Transform>();
+                foreach (Transform comp in buttWinArray)
+                {
+                    if (comp.name == "AtWillPanel")
+                    {
+                        return comp.GetComponent<AtWillManager>();
+                    }
+                }
+            }
+        }        
+        return null;
+    }
+
+    public void DoubleSpeed()
+    {
+        speed = 6f;
+        StartCoroutine(SpeedRevert(60f));
+    }
+    public void Die()
+    {
+        deathCanvas.SetActive(true);
+        canMove = false;
+        atWillManager.inAtWillMenu = true;
+        alive = false;
+        anim.SetTrigger("die");
+    }
+
+    private IEnumerator SpeedRevert(float time)
+    {
+        yield return new WaitForSeconds(time);
+        speed = 3f;
+    }
+
+    public void UnlimitedStamina()
+    {
+        unlimitedStamina = true;
+        StartCoroutine(UnlimitedStaminaCooldown(60f));
+    }
+
+    private IEnumerator UnlimitedStaminaCooldown(float time)
+    {
+        yield return new WaitForSeconds(time);
+        unlimitedStamina = false;
+    }
+
+    public void OpenBank()
+    {
+        bankDisplay.SetActive(true);
+        canMove = false;
+    }
+
+    public void CloseBank()
+    {
+        bankDisplay.SetActive(false);
+        canMove = true;
+    }
+
+
 }   
         
     
