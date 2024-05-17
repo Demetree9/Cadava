@@ -1,0 +1,439 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+
+public class PotionPanel : MonoBehaviour
+{
+    public TMP_Text numberOfPots;
+    public TMP_Text numberOfStamPots;
+    public TMP_Text numberOfBasicRations;
+    public TMP_Text numberOfSpeedPots;
+    public TMP_Text numberOfTirelessPots;
+    public TMP_Text numberOfMagicPots;
+    public Button button;
+    public InventoryObject inventory;   
+    private HealthManaStama healthManaStama;
+    public HungerThirstManager hungerThirstManager;
+    public AtWillManager atWillManager;
+    private PlayerController playerController;
+    public GameObject healthPotPrefab;
+    public GameObject basicRationPrefab;
+    [SerializeField] private GameObject staminaPotionPrefab;
+    [SerializeField] private GameObject magicPotionPrefab;
+    [SerializeField] private GameObject speedPotionPrefab;
+    [SerializeField] private GameObject tirelessPotionPrefab;
+    public bool healthPotActive = false;
+    public bool basicRationActive = false;        
+    public bool staminaPotionActive = false;        
+    public bool speedPotionActive = false;        
+    public bool tirelessPotionActive = false;        
+    public bool magicPotionActive = false;        
+    private bool menuOpen = false;
+    private bool hovingOverUI = false;
+    private bool atWillOn = true;    
+    private bool healthPotDisplayed = false;    
+    private bool basicRationDisplayed = false;    
+    private bool staminaPotionDisplayed = false;    
+    private bool speedPotionDisplayed = false;    
+    private bool tirlessPotionDisplayed = false;    
+    private bool magicPotDisplayed = false;    
+    [SerializeField] private GameObject healthPotPic;
+    [SerializeField] private GameObject basicRationPic;
+    [SerializeField] private GameObject staminaPotionPic;
+    [SerializeField] private GameObject magicPotionPic;
+    [SerializeField] private GameObject speedPotionPic;
+    [SerializeField] private GameObject tirelessPotionPic;
+    [SerializeField] private GameObject menuPanel;
+    [SerializeField] private GameObject displayPanel;
+    [SerializeField] private AudioClip drink;
+    [SerializeField] private AudioClip eat;
+    [SerializeField] private AudioSource src;
+
+    //Will need bools and buttons for different potions and menu interaction. 
+    void Start()
+    {
+        button.onClick.AddListener(OpenMenu);
+        //Sets health:
+        healthManaStama = GetComponentInParent<HealthManaStama>();
+        playerController = GetComponentInParent<PlayerController>();
+    }
+
+   
+    void Update()
+    {
+        //Using Consumable:
+        if (Input.GetKeyDown(KeyCode.F) && healthPotActive){
+            DrinkHealthPotion();
+            DisplayHealthPotAmount();
+        } 
+        else if (Input.GetKeyDown(KeyCode.F) && basicRationActive){
+            EatBasicRation();
+        }
+        else if (Input.GetKeyDown(KeyCode.F) && staminaPotionActive)
+        {
+            DrinkStaminaPotion();
+        }
+        else if (Input.GetKeyDown(KeyCode.F) && speedPotionActive)
+        {
+            DrinkSpeedPotion();
+        }
+        else if (Input.GetKeyDown(KeyCode.F) && tirelessPotionActive)
+        {
+            DrinkTirelessPotion();
+        }
+        else if (Input.GetKeyDown(KeyCode.F) && magicPotionActive)
+        {
+            DrinkMagicPotion();
+        }
+        //Menu Switch Logic:
+        // if (menuOpen)
+        //     button.onClick.AddListener(CloseMenu);
+        // else if (!menuOpen)
+        //     button.onClick.AddListener(OpenMenu);  
+        //At Will enable and disable:
+        if (hovingOverUI & menuOpen & atWillOn){
+            AtWillDisable();
+        } 
+        else if (!hovingOverUI & menuOpen & atWillOn){
+            AtWillDisable();
+        }
+        else if (hovingOverUI & !menuOpen & atWillOn){
+            AtWillDisable();
+        }
+        else if (!hovingOverUI & !menuOpen & !atWillOn){
+            AtWillEnable();
+        }
+    }
+
+    public void CloseMenu(){
+        menuPanel.SetActive(false);
+        menuOpen = false;
+        StartCoroutine(AtWillDisableDelay(1f));        
+        BoolReset();
+    }
+    public void OpenMenu(){        
+        menuPanel.SetActive(true);
+        menuOpen = true;
+        //Makes it so you can't use at will in menu:
+        atWillManager.inAtWillMenu = true;
+        int counter = 0;
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            var itemCheck = inventory.Container.Items[i].ID;              
+            //If health pot: ----------------------
+            if (itemCheck == 1 && !healthPotDisplayed){
+                Instantiate(healthPotPrefab, displayPanel.transform);
+                healthPotDisplayed = true;
+                counter += 1;
+            }            
+            //if basic ration: -------------------------
+            if (itemCheck == 0 && !basicRationDisplayed){
+                Instantiate(basicRationPrefab, displayPanel.transform);
+                basicRationDisplayed = true;
+                counter += 1;
+            }
+            //If Stamina Potion:
+            if (itemCheck == 15 && !staminaPotionDisplayed)
+            {
+                Instantiate(staminaPotionPrefab, displayPanel.transform);
+                staminaPotionDisplayed = true;
+                counter += 1;
+            }
+            //If Speed Potion:
+            if (itemCheck == 17 && !staminaPotionDisplayed)
+            {
+                Instantiate(speedPotionPrefab, displayPanel.transform);
+                speedPotionDisplayed = true;
+                counter += 1;
+            }
+            //If Tireless Potion:
+            if (itemCheck == 18 && !tirelessPotionActive)
+            {
+                Instantiate(tirelessPotionPrefab, displayPanel.transform);
+                tirlessPotionDisplayed = true;
+                counter += 1;
+            }
+            if (itemCheck == 16 && !magicPotDisplayed)
+            {
+                Instantiate(magicPotionPrefab, displayPanel.transform);
+                magicPotDisplayed = true;
+                counter += 1;
+            }
+        }
+        if (counter == 0) CloseMenu();
+        
+    }
+    //Activation Methods: ----------------------
+    public void ActivateHealthPot(){
+        DisplayHealthPotAmount();
+        healthPotActive = true;
+        healthPotPic.SetActive(true);
+    }
+    public void ActivateBasicRation(){
+        DisplayBasicRationAmount();
+        basicRationActive = true;
+        basicRationPic.SetActive(true);
+    }
+
+    public void ActivateStaminaPotion()
+    {
+        DisplayStaminaPotAmount();
+        staminaPotionActive = true;
+        staminaPotionPic.SetActive(true);
+    }
+    public void ActivateSpeedPotion()
+    {
+        DisplaySpeedPotionAmount();
+        speedPotionActive = true;
+        speedPotionPic.SetActive(true);
+    }
+    public void ActivateTirelessPotion()
+    {
+        DisplayTirelessPotionAmount();
+        tirelessPotionActive = true;
+        tirelessPotionPic.SetActive(true);
+    }
+
+    public void ActivateMagicPotion()
+    {
+        DisplayMagicPotAmount();
+        magicPotionActive = true;
+        magicPotionPic.SetActive(true);
+    }
+    public void AtWillEnable(){
+        atWillManager.inAtWillMenu = false;
+        atWillOn = true;
+    }
+    //Deactivation Methods: -----------------
+    public void DisableAll(){
+        healthPotActive = false;
+        healthPotPic.SetActive(false);
+        basicRationActive = false;
+        basicRationPic.SetActive(false);
+        staminaPotionActive = false;
+        staminaPotionPic.SetActive(false);
+        speedPotionActive = false;
+        speedPotionPic.SetActive(false);
+        tirelessPotionActive = false;
+        tirelessPotionPic.SetActive(false);
+        magicPotionActive = false;
+        magicPotionPic.SetActive(false);
+    }
+    public void AtWillDisable(){
+        //The Player Controller won't be able to fire a spell with this code:
+        atWillManager.inAtWillMenu = true;
+        atWillOn = false;
+    } 
+    
+    private void BoolReset()
+    {
+        healthPotDisplayed = false;
+        basicRationDisplayed = false;
+    }
+    
+    private IEnumerator AtWillDisableDelay(float time){
+        yield return new WaitForSeconds(time);
+        AtWillEnable();
+    }
+    
+    //Hover Methods: ------------------
+    public void HoverStart(){
+        hovingOverUI = true;
+    }
+    public void HoverEnd(){
+        hovingOverUI = false;
+    }
+
+    //Basic Ration: ------------------------------
+    private void DisplayBasicRationAmount(){
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 0){
+                numberOfBasicRations.text = inventory.Container.Items[i].amount.ToString();
+            }
+        }
+    }
+    private void EatBasicRation(){
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 0){
+                //Erase after inventory.remove() is implemented
+                if (inventory.Container.Items[i].amount >= 1){
+                    inventory.Container.Items[i].amount -= 1;
+                    hungerThirstManager.HungerLevelSet(25);                                  
+                    numberOfBasicRations.text = inventory.Container.Items[i].amount.ToString();
+                    src.clip = eat;
+                    src.Play();
+                    if (inventory.Container.Items[i].amount == 0)
+                    {
+                        inventory.RemoveItem(inventory.Container.Items[i].item);
+                        DisableAll();
+                    }
+                                          
+                }
+            }
+        }
+
+    }
+
+    //Health Pot: -------------------------------
+    private void DisplayHealthPotAmount(){
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 1){
+                numberOfPots.text = inventory.Container.Items[i].amount.ToString();
+            }
+        }
+    }
+    private void DrinkHealthPotion(){
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 1){
+                if (inventory.Container.Items[i].amount >= 1){
+                    inventory.Container.Items[i].amount -= 1;
+                    healthManaStama.Heal(healthManaStama.maxHp);                  
+                    numberOfPots.text = inventory.Container.Items[i].amount.ToString();
+                    src.clip = drink;
+                    src.Play();
+                    if (inventory.Container.Items[i].amount == 0){
+                        inventory.RemoveItem(inventory.Container.Items[i].item); 
+                        DisableAll();                      
+                    }                                            
+                }
+            }
+        }
+    }
+
+    //Stamina Potion: ---------------------------------------------------------------------------------------------------------------------
+    private void DisplayStaminaPotAmount()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 15)
+            {
+                numberOfStamPots.text = inventory.Container.Items[i].amount.ToString();
+            }
+        }
+    }
+    private void DrinkStaminaPotion()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 15)
+            {
+                
+                inventory.Container.Items[i].amount -= 1;
+                healthManaStama.RestoreStamina(100);
+                numberOfStamPots.text = inventory.Container.Items[i].amount.ToString();
+                src.clip = drink;
+                src.Play();
+                if (inventory.Container.Items[i].amount == 0)
+                {
+                    inventory.RemoveItem(inventory.Container.Items[i].item);
+                    DisableAll();
+                }
+                
+            }
+        }
+    }
+    //Magic Potion: -------------------------------------------------------------------------------------------------------
+    private void DisplayMagicPotAmount()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 16)
+            {
+                numberOfMagicPots.text = inventory.Container.Items[i].amount.ToString();
+            }
+        }
+    }
+    private void DrinkMagicPotion()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 16)
+            {
+                
+                inventory.Container.Items[i].amount -= 1;
+                healthManaStama.RestoreMana(100);
+                numberOfMagicPots.text = inventory.Container.Items[i].amount.ToString();
+                src.clip = drink;
+                src.Play();
+                if (inventory.Container.Items[i].amount == 0)
+                {
+                    inventory.RemoveItem(inventory.Container.Items[i].item);
+                    DisableAll();
+                }                
+            }
+        }
+    }
+    //Speed Potion: ---------------------------------------------------------------------------------------------------------------------
+    private void DisplaySpeedPotionAmount()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 17)
+            {
+                numberOfSpeedPots.text = inventory.Container.Items[i].amount.ToString();
+            }
+        }
+    }
+    private void DrinkSpeedPotion()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 17)
+            {
+                
+                inventory.Container.Items[i].amount -= 1;
+                playerController.DoubleSpeed();
+                numberOfSpeedPots.text = inventory.Container.Items[i].amount.ToString();
+                src.clip = drink;
+                src.Play();
+                if (inventory.Container.Items[i].amount == 0)
+                {
+                    inventory.RemoveItem(inventory.Container.Items[i].item);
+                    DisableAll();
+                }
+                
+            }
+        }
+    }
+
+    //Tireless Potion: ---------------------------------------------------------------------------------------------------------------------
+    private void DisplayTirelessPotionAmount()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 18)
+            {
+                numberOfTirelessPots.text = inventory.Container.Items[i].amount.ToString();
+            }
+        }
+    }
+    private void DrinkTirelessPotion()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 18)
+            {
+                
+                inventory.Container.Items[i].amount -= 1;
+                playerController.UnlimitedStamina();
+                numberOfTirelessPots.text = inventory.Container.Items[i].amount.ToString();
+                src.clip = drink;
+                src.Play();
+                if (inventory.Container.Items[i].amount == 0)
+                {
+                    inventory.RemoveItem(inventory.Container.Items[i].item);
+                    DisableAll();
+                }
+                
+            }
+        }
+    }
+
+
+}
