@@ -9,11 +9,26 @@ public class SocialEncounterManager : MonoBehaviour
     [SerializeField] private GameObject arenaAssulter;
     [SerializeField] private GameObject alchemyGuy;
     [SerializeField] private GameObject spawnedArenaAssulter;
+    [SerializeField] private GameObject houseRep;
+    [SerializeField] private GameObject foodBegger;
+    [SerializeField] private GameObject muggingEncounter;
+    [SerializeField] private GameObject followMeGuy;
+    [SerializeField] private GameObject chestAssulters;
+    [SerializeField] private GameObject spawnedFollowMeGuy;    
+    [SerializeField] private GameObject spawnedChest;
+    [SerializeField] private GameObject spawnedFoodBegger;
+    [SerializeField] private GameObject spawnedMuggingEncounter;
+    public GameObject spawnedHouseRep;
     [SerializeField] private Transform arenaAssulterSpawn;
     [SerializeField] private Sprite arenaAssulterImage;
     [SerializeField] private Sprite bowManImage;
     [SerializeField] private Sprite bedCamperImage;
     [SerializeField] private Sprite alchemyGuyImage;
+    [SerializeField] private Sprite houseRepImage;
+    [SerializeField] private Sprite foodBeggerImage;
+    [SerializeField] private Sprite muggingVictimImage;
+    [SerializeField] private Sprite followMeGuyImage;
+    [SerializeField] private Sprite chestImage;
     [SerializeField] private InventoryObject inventory;
     [SerializeField] private Item copperItem;
     [SerializeField] private GameObject bowMan;
@@ -22,6 +37,9 @@ public class SocialEncounterManager : MonoBehaviour
     [SerializeField] private GameObject toll;
     [SerializeField] private List<Transform> spawnPoints;
     [SerializeField] private List<Transform> bedSpawnPoints;
+    [SerializeField] private List<string> slaveHouses;
+    [SerializeField] private List<Item> spells;
+    [SerializeField] private List<Item> potions;
     public static List<GameObject> spawnedNPCs = new();
     public static bool bottomLeftBedCampers = false;
     public List<GameObject> bottomLeftBedCamperList;
@@ -30,20 +48,45 @@ public class SocialEncounterManager : MonoBehaviour
     public List<GameObject> activeBedTolls;
     public static bool topLeftBedCampers = false;
     public static bool bottomRightBedCampers = false;
+    public static bool gaveBeggerFood = false;
+    public static bool beggerGavePlayerMoney = false;
     public Bed bedBottomRight;
     public Bed bedBottomLeft;
     public Bed bedTopLeft;
     public static bool talkedToAlchGuy = false;   
     [SerializeField] private ChatDisplay chatDisplay;
+    private UserInterface userInterface;
+    public Transform chestLocation;
+    [SerializeField] private GameObject chest;
+    private int lockPickAttempts = 0;
+    private bool shouldPickLock = true;
+    
     void Start()
-    {
+    {        
         if (chatDisplay != null) return;
         chatDisplay = GameObject.Find("Player 2(Clone)").GetComponentInChildren<ChatDisplay>(true);
 
         //Resets Bed Campers Bool:
         bottomLeftBedCampers = false;
         topLeftBedCampers = false;
-        bottomRightBedCampers = false;        
+        bottomRightBedCampers = false;
+
+        string jaques = "David Jaques Ptera of the Ptera Clan";
+        string harkness = "Wallace Harkness of the Harkness Family";
+        string florence = "Quinn Florence";
+        string requiscent = "Ethel Requiscent";
+        string lemone = "Iora Lemone of the Lemone Clan";
+        string zedoro = "Lucha Zedoro of the Zedoro Family";
+
+        //Adding to List:
+        slaveHouses.Add(jaques);
+        slaveHouses.Add(harkness);
+        slaveHouses.Add(florence);
+        slaveHouses.Add(requiscent);
+        slaveHouses.Add(lemone);
+        slaveHouses.Add(zedoro);
+
+        userInterface = PlayerManager.player1.GetComponentInChildren<DynamicInterface>(true);
 
     }
     
@@ -59,16 +102,399 @@ public class SocialEncounterManager : MonoBehaviour
         spawnedNPCs = new();
         activeBedTolls = new();
         if (spawnPoints.Count != 3) spawnPoints = RandomSpawnPointGetter();
-        ArenaAssulter();
+        if (ArenaBoard.encountersCompleated == 2)
+        {
+            HouseRep();
+        }
+        else if (!FoodBegger())
+        {
+            if (!ArenaAssulter()) SpawnFollowMeGuy();
+        }        
+                
         SpawnBowMan();
         SpawnBedCampers();
         SpawnAlchemyGuy();
+        if (spawnPoints.Count != 0) SpawnMugging();
         PortalToSlaveDistrict.shouldSocial = false;
         
     }
-    //ArenaAssulter: --------------------------------------------------------
-    public void ArenaAssulter()
+    //Follow me Guy: ---------------------------------------------------------------------------------------------------------------
+    private void SpawnFollowMeGuy()
     {
+        int ran = Random.Range(0, 21);
+        if (ran >= 10)
+        {
+            int ran2 = Random.Range(0, spawnPoints.Count);
+            spawnedFollowMeGuy = Instantiate(followMeGuy, spawnPoints[ran2].position, Quaternion.identity);
+            spawnedChest = Instantiate(chest, chestLocation.position, Quaternion.identity);
+            spawnedChest.transform.position = new Vector3(chestLocation.position.x, chestLocation.position.y, 0);
+        }
+    }
+
+    public void FollowMeFirstSpeech()
+    {
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(followMeGuyImage, "Hey, I found a chest and need help opening it. Follow me!", "Okay", "Nah");        
+        chatDisplay.topButton.onClick.AddListener(AcceptFollow);
+        chatDisplay.middleButton.onClick.AddListener(DeclineFollow);
+    }
+
+    private void AcceptFollow()
+    {
+        var guy = spawnedFollowMeGuy.GetComponentInParent<FollowMeGuy>();
+        guy.BubbleText("Follow me!");
+        guy.GoToChest(chestLocation);
+        chatDisplay.CanvasDisable();
+    }
+
+    private void DeclineFollow()
+    {
+        chatDisplay.SetDisplay(followMeGuyImage, "Okay...whatever...", "Hmm?", "Peace");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        StartCoroutine(FollowMeLeaveToDurk(2f, spawnedFollowMeGuy));
+    }
+
+    private IEnumerator FollowMeLeaveToDurk(float time, GameObject guy)
+    {
+        yield return new WaitForSeconds(time);
+        guy.GetComponentInParent<FollowMeGuy>().LeaveToDurk();
+        //If guys are spawned, he'll call you a sucker before leaving.
+        if (!shouldPickLock) spawnedFollowMeGuy.GetComponentInParent<FollowMeGuy>().BubbleText("Sucker!");
+    }
+
+    public void ChestSpeech()
+    {
+        int ran = Random.Range(0, 2);
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(followMeGuyImage, "Here it is. See if you can open it.", "Sure", "Meh");        
+        if (ran == 0)
+        {
+            SpawnChestAssulters();
+            StartCoroutine(FollowMeLeaveToDurk(4f, spawnedFollowMeGuy));            
+            chatDisplay.topButton.onClick.AddListener(LockPickAttempt);
+            chatDisplay.middleButton.onClick.AddListener(MenuClose);
+            shouldPickLock = false;
+        }
+        else
+        {
+            chatDisplay.topButton.onClick.AddListener(LockPickAttempt);
+            chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        }
+        
+    }
+
+    private void LockPickAttempt()
+    {
+        int ran = Random.Range(5, 11);
+        if (lockPickAttempts >= ran && shouldPickLock)
+        {
+            PickLock();
+            return;
+        }
+        if (lockPickAttempts == 1)
+            chatDisplay.SetDisplay(chestImage, "It doesn't budge after " + lockPickAttempts.ToString() + " attempt.", "Again", "Dip");
+        else chatDisplay.SetDisplay(chestImage, "It doesn't budge after " + lockPickAttempts.ToString() + " attempts.", "Again", "Dip");
+        lockPickAttempts += 1;
+
+    }
+
+    private void PickLock()
+    {
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(chestImage, "The chest finally opens after "
+            + lockPickAttempts.ToString() + " attempts.", "Keep", "Share");
+        chatDisplay.BottomButtonEnable();
+        chatDisplay.bottomButtonText.text = "Give";
+        chatDisplay.topButton.onClick.AddListener(PlayerTakesAll);
+        chatDisplay.middleButton.onClick.AddListener(PlayerShares);
+        chatDisplay.bottomButton.onClick.AddListener(PlayerSurrenders);
+    }
+
+    private void PlayerTakesAll()
+    {
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(followMeGuyImage, "Oh I see how it is...", "Sucks", "Leave!");
+        SpawnChestAssulters();
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        chatDisplay.BottomButtonDisable();
+        StartCoroutine(FollowMeLeaveToDurk(2f, spawnedFollowMeGuy));
+        RandomPotion();
+        RandomPotion();        
+    }
+
+    private void PlayerShares()
+    {
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(followMeGuyImage, "50 50 sounds good to me", "Yep", "I agree");
+        int ran = Random.Range(0, 2);
+        if (ran == 0) SpawnChestAssulters();
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        chatDisplay.BottomButtonDisable();
+        StartCoroutine(FollowMeLeaveToDurk(2f, spawnedFollowMeGuy));
+        RandomPotion();        
+    }
+
+    private void PlayerSurrenders()
+    {
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(followMeGuyImage, "All for me? Okay, I won't argue.", "Yep", "I agree");        
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        chatDisplay.BottomButtonDisable();
+        StartCoroutine(FollowMeLeaveToDurk(2f, spawnedFollowMeGuy));        
+    }
+
+    private void RandomPotion()
+    {
+        int ran = Random.Range(0, potions.Count);
+        inventory.AddItem(potions[ran], 1);
+    }
+
+    private void SpawnChestAssulters()
+    {
+        int ran = Random.Range(0, spawnPoints.Count);
+        Instantiate(chestAssulters, spawnPoints[ran].position, Quaternion.identity);
+    }
+
+
+    //Mugging Woman: ----------------------------------------------------------------------------------------------------------------
+    private void SpawnMugging()
+    {
+        int ran = Random.Range(0, 21);
+        if (ran >= 10)
+        {
+            int ran2 = Random.Range(0, spawnPoints.Count);
+            spawnedMuggingEncounter = Instantiate(muggingEncounter, spawnPoints[ran2].position, Quaternion.identity, transform);
+            spawnedNPCs.Add(spawnedMuggingEncounter);
+        }
+    }
+
+    public void InvestigateAliveBody()
+    {
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(muggingVictimImage, "Please...spare a...healing potion", "Heal", "Leave");
+        chatDisplay.BottomButtonEnable();
+        chatDisplay.bottomButtonText.text = "Rob";
+        chatDisplay.topButton.onClick.AddListener(GivePotion);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        chatDisplay.bottomButton.onClick.AddListener(RobBody);
+    }
+
+    private void GivePotion()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 1)
+            {
+                inventory.Container.Items[i].amount -= 1;
+                spawnedMuggingEncounter.GetComponent<MuggerManager>().victim.GetComponent<VictimAI>().Revive();
+                spawnedMuggingEncounter.GetComponent<MuggerManager>().victim.GetComponent<AudioSource>().Play();
+                ThankPlayer();
+                userInterface.RemoveItems();
+                userInterface.UpdateSlots();
+                return;
+            }
+        }
+        chatDisplay.SetDisplay(muggingVictimImage, "You don't...have a....potion", "Oops", "My bad");
+        StartCoroutine(MenuCloseDelay(2f));
+    }
+
+    public void ThankPlayer()
+    {
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(muggingVictimImage, "Thank you kindly. Here, take this spell. I must be going.", "Okay", "Bye");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
+        StartCoroutine(VictimLeaveToDurkDelay(2f));
+        int ran = Random.Range(0, spells.Count);
+        inventory.AddItem(spells[ran], 1);
+        userInterface.RemoveItems();
+        userInterface.UpdateSlots();
+    }
+
+    private void RobBody()
+    {
+        int ran = Random.Range(0, 2);
+        inventory.AddItem(copperItem, ran);
+        userInterface.RemoveItems();
+        userInterface.UpdateSlots();
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(muggingVictimImage, "Why have you....done this...?", "Money", "Bye");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
+        spawnedMuggingEncounter.GetComponent<MuggerManager>().victim.GetComponent<VictimAI>().healthManaStama.TakeDamage(100);        
+    }
+    
+
+    public void InvestigateDeadBody()
+    {
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(muggingVictimImage, "...", "Dip", "Leave");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+    }
+
+    private IEnumerator VictimLeaveToDurkDelay(float time)
+    {
+        yield return new WaitForSeconds(time);
+        var first = spawnedMuggingEncounter.GetComponentInParent<MuggerManager>();
+        first.victimAI.LeaveToDurk();         
+    }
+
+    //Food Begger: --------------------------------------------------------------------------------------------------------------
+    private bool FoodBegger()
+    {   if (beggerGavePlayerMoney) return false;     
+        int ran = Random.Range(0, 21);
+        if (ran >= 10)
+        {
+            int ran2 = Random.Range(0, spawnPoints.Count);
+            spawnedFoodBegger = Instantiate(foodBegger, spawnPoints[ran2].position, Quaternion.identity, transform);
+            spawnedNPCs.Add(spawnedFoodBegger);
+            return true;
+    }
+        else return false;
+    }
+
+    public void FoodBeggerFirstSpeech()
+    {
+        chatDisplay.CanvasEnable();        
+        chatDisplay.SetDisplay(foodBeggerImage, "Please sir, can you spare something to eat?", "Yes", "Nope");
+        chatDisplay.BottomButtonEnable();
+        chatDisplay.bottomButtonText.text = "One sec";
+        chatDisplay.topButton.onClick.AddListener(GiveFood);
+        chatDisplay.middleButton.onClick.AddListener(DeclineFood);
+        chatDisplay.bottomButton.onClick.AddListener(OnSecFood);
+    }
+
+    public void GaveBeggerFood()
+    {
+        chatDisplay.CanvasEnable();
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(foodBeggerImage, "Hey! Here's 2 copper for giving me food ealier. You're the best!", "Yep", "I know");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
+        inventory.AddItem(copperItem, 2);        
+        StartCoroutine(LeaveToDurkDelay(2f));
+        userInterface.RemoveItems();
+        userInterface.UpdateSlots();
+        beggerGavePlayerMoney = true;
+    }
+
+    private void GiveFood()
+    {
+        for (int i = 0; i < inventory.Container.Items.Length; i++)
+        {
+            if (inventory.Container.Items[i].ID == 0)
+            {
+                inventory.Container.Items[i].amount -= 1;
+                chatDisplay.RemoveListeners();
+                chatDisplay.SetDisplay(foodBeggerImage, "Thank you! I'll be sure to make it up to you.", "Okay", "No rush");
+                chatDisplay.topButton.onClick.AddListener(MenuClose);
+                chatDisplay.middleButton.onClick.AddListener(MenuClose);                
+                StartCoroutine(LeaveToDurkDelay(2f));                
+                gaveBeggerFood = true;
+                userInterface.RemoveItems();
+                userInterface.UpdateSlots();
+                return;
+            }
+        }
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(foodBeggerImage, "You don't have any food though...", "Oh...?", "Oops");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
+        StartCoroutine(LeaveToFoodDelay(2f));
+    }
+
+    private void DeclineFood()
+    {
+        chatDisplay.SetDisplay(foodBeggerImage, "That's fine. I understand....Have a good day", "Okay", "Bye");
+        chatDisplay.RemoveListeners();
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        StartCoroutine(LeaveToDurkDelay(2f));
+    }
+
+    private void OnSecFood()
+    {
+
+        chatDisplay.SetDisplay(foodBeggerImage, "You're serious!? I'll wait by the food market!", "See ya", "Bye");
+        chatDisplay.RemoveListeners();
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);
+        StartCoroutine(LeaveToFoodDelay(2f));
+    }
+
+    private IEnumerator LeaveToDurkDelay(float time)
+    {
+        yield return new WaitForSeconds(time);
+        spawnedFoodBegger.GetComponentInParent<FoodBegger>().LeaveToDurk();
+    }
+
+    private IEnumerator LeaveToFoodDelay(float time)
+    {
+        yield return new WaitForSeconds(time);
+        spawnedFoodBegger.GetComponentInParent<FoodBegger>().GoToFoodMarket();
+    }
+
+    //House Rep: ------------------------------------------------------------------------------------------------
+    private void HouseRep()
+    {
+        int ran = Random.Range(0, spawnPoints.Count);
+        spawnedHouseRep = Instantiate(houseRep, spawnPoints[ran].position, Quaternion.identity);
+    }
+
+    public void HouseRepFirstSpeech()
+    {
+        int ran = Random.Range(0, slaveHouses.Count);
+        chatDisplay.CanvasEnable();
+        chatDisplay.SetDisplay(houseRepImage, slaveHouses[ran] + " has their eye on you and offers you a gift.", "Accept", "Decline");
+        chatDisplay.topButton.onClick.AddListener(AcceptCopper);
+        chatDisplay.middleButton.onClick.AddListener(DeclineCopper);
+        PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;
+    }
+
+    private void AcceptCopper()
+    {
+        chatDisplay.SetDisplay(houseRepImage, "2 copper for you. I would suggest purchasing some spells or supplies...", "Why?", "Why?");
+        chatDisplay.MiddleButtonDisable();
+        chatDisplay.topButton.onClick.RemoveListener(AcceptCopper);
+        inventory.AddItem(copperItem, 2);
+        userInterface.RemoveItems();
+        userInterface.UpdateSlots();
+        chatDisplay.topButton.onClick.AddListener(HarderChallenges);
+    }
+
+    private void DeclineCopper()
+    {
+        chatDisplay.SetDisplay(houseRepImage, "Odd...I'll keep it then. I would suggest purchasing some spells or supplies", "Why?", "Why?");
+        chatDisplay.MiddleButtonDisable();
+        chatDisplay.topButton.onClick.RemoveListener(AcceptCopper);
+        chatDisplay.topButton.onClick.AddListener(HarderChallenges);        
+    }
+
+    private void HarderChallenges()
+    {
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(houseRepImage, "Because the arena matches are going to be tougher now...", "Why?", "What?");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
+        StartCoroutine(DurkDelay(2f));
+    }
+
+
+    private IEnumerator DurkDelay(float time)
+    {
+        yield return new WaitForSeconds(time);
+        spawnedHouseRep.GetComponentInParent<HouseRepAI>().LeaveToDurk();
+    }
+
+
+    //ArenaAssulter: -------------------------------------------------------------------------------------------------------
+    public bool ArenaAssulter()
+    {        
         int ran = Random.Range(0, 21);
         if (ran >= 10)
         {
@@ -78,8 +504,10 @@ public class SocialEncounterManager : MonoBehaviour
             chatDisplay.SetDisplay(arenaAssulterImage, "Give me all your copper! Or else...", "Yes", "No");
             chatDisplay.topButton.onClick.AddListener(GiveCopper);
             chatDisplay.middleButton.onClick.AddListener(MakeHostile);
-            PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;              
+            PlayerManager.player1.GetComponentInParent<PlayerController>().menuOpen = true;
+            return true;
         }
+        return false;
     }
 
     private void GiveCopper()
@@ -87,12 +515,13 @@ public class SocialEncounterManager : MonoBehaviour
         for (int i = 0; i < inventory.Container.Items.Length; i++)
         {
             if (inventory.Container.Items[i].ID == 4)
-            {
-                print("gavecopper");
+            {                
                 inventory.Container.Items[i].amount = 0;
                 chatDisplay.CanvasDisable();
                 spawnedArenaAssulter.GetComponent<ASrenaAssulterAI>().LeaveToDurk();
                 spawnedArenaAssulter.GetComponent<ASrenaAssulterAI>().anim.SetTrigger("run");
+                userInterface.RemoveItems();
+                userInterface.UpdateSlots();
                 return;
             }
         }
@@ -113,10 +542,9 @@ public class SocialEncounterManager : MonoBehaviour
         chatDisplay.CanvasDisable();
     }
 
-    //Bow Man: -----------------------------------------------------------------------------------
+    //Bow Man: -----------------------------------------------------------------------------------------------------------------
     private void SpawnBowMan()
-    {
-        print("RANDOWMAN");
+    {        
         int ran = Random.Range(0, 21);
         if (ran >= 10)
         {
@@ -147,14 +575,18 @@ public class SocialEncounterManager : MonoBehaviour
 
     private void AcceptBowOffer()
     {
-        chatDisplay.dialouge.text = "Good, good! I'll give you a copper for it. Go now!".ToString();
-        StartCoroutine(MenuCloseDelay(3f));
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(bowManImage, "Good, good! I'll give you a copper for it. Go now!", "Okay", "Sure");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
     }
 
     private void DeclineBowOffer()
     {
-        chatDisplay.dialouge.text = "Well then get out of here!".ToString();
-        StartCoroutine(MenuCloseDelay(1f));
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(bowManImage, "Well then get out of here!", "Okay", "Sure");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
     }
 
     private void GiveBow()
@@ -164,17 +596,24 @@ public class SocialEncounterManager : MonoBehaviour
             if (inventory.Container.Items[i].ID == 9)
             {                
                 inventory.Container.Items[i].amount = 0;
-                chatDisplay.dialouge.text = "Thank you very much. Here's your payment";
+                chatDisplay.RemoveListeners();
+                chatDisplay.SetDisplay(bowManImage, "Thank you very much. Here's your payment", "Thanks", "Bye");
+                chatDisplay.topButton.onClick.AddListener(MenuClose);
+                chatDisplay.middleButton.onClick.AddListener(MenuClose);                
                 inventory.AddItem(copperItem, 1);
-                StartCoroutine(MenuCloseDelay(2f));              
+                userInterface.RemoveItems();
+                userInterface.UpdateSlots();
                 return;
             }
         }
-        chatDisplay.dialouge.text = "You don't have a bow ya dunce...";
-        StartCoroutine(MenuCloseDelay(2f));
+        chatDisplay.RemoveListeners();
+        chatDisplay.SetDisplay(bowManImage, "You don't have a bow ya dunce...", "Oops", "My bad");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
+        
     }
 
-    //Bed Campers: ---------------------------------------------------------------
+    //Bed Campers: ---------------------------------------------------------------------------------------------------------------
     public List<Transform> BedSpawnPointSorter(int start, int end)
     {
         List<Transform> returnList = new();
@@ -466,9 +905,10 @@ public class SocialEncounterManager : MonoBehaviour
 
     private void DeclineAlchOffer()
     {
-        chatDisplay.RemoveListeners();
-        chatDisplay.SetDisplay(alchemyGuyImage, "Suit yourself", "...", "...");
-        StartCoroutine(MenuCloseDelay(1f));
+        chatDisplay.RemoveListeners();        
+        chatDisplay.SetDisplay(alchemyGuyImage, "Suit yourself.", "Yeah", "See ya'");
+        chatDisplay.topButton.onClick.AddListener(MenuClose);
+        chatDisplay.middleButton.onClick.AddListener(MenuClose);        
     }
 
     // Utility: -----------------------------------------------------------------------
@@ -550,5 +990,6 @@ public class SocialEncounterManager : MonoBehaviour
         SpawnBowMan();
         SpawnBedCampers();
         SpawnAlchemyGuy();
+
     }
 }
