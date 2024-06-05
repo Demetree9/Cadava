@@ -1,0 +1,264 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.U2D.Animation;
+using UnityEngine.SceneManagement;
+
+public class CharacterBuilder : MonoBehaviour
+{
+    
+    [SerializeField] private Item meteorBomb;    
+    [SerializeField] private Item iceBarrage;
+    //Save:
+    [SerializeField] private Button save;
+    [SerializeField] private GameObject self;
+    [SerializeField] private GameObject canvasObj;
+    [SerializeField] private GameObject hud;
+    //hats:
+    [SerializeField] private Button nextHat;
+    [SerializeField] private Button previousHat;
+    [SerializeField] private Button nextBody;
+    [SerializeField] private Button previousBody;
+    [SerializeField] private Button nextBeard;
+    [SerializeField] private Button previousBeard;
+    [SerializeField] private Button nextHair;
+    [SerializeField] private Button previousHair;
+    [SerializeField] private Button nextArms;
+    [SerializeField] private Button previousArms;
+    [SerializeField] private Button hairColor;
+    [SerializeField] private Button noHat;
+    [SerializeField] private Button noBeard;
+    [SerializeField] private List <Sprite> hats;
+    [SerializeField] private List <Sprite> bodies;
+    [SerializeField] private List <Sprite> beards;
+    [SerializeField] private List <Sprite> topArms;
+    [SerializeField] private List <Sprite> bottomArms;
+    [SerializeField] private List <Sprite> hair;
+    [SerializeField] private List <Color> colorOptions;
+    private int currentHat = 0;
+    private int currentBody = 0;
+    private int currentBeard = 0;
+    private int currentHair = 0;
+    private int colorInt = 0;
+    private int currentArm = 0;
+    [SerializeField] private SpriteRenderer hatRenderer;    
+    [SerializeField] private SpriteRenderer bodyRenderer;    
+    [SerializeField] private SpriteRenderer beardRenderer;    
+    [SerializeField] private SpriteRenderer hairRenderer;    
+    [SerializeField] private SpriteRenderer topArmRenderer;    
+    [SerializeField] private SpriteRenderer bottomArmRenderer;    
+    [SerializeField] private InventoryObject playerInventory;
+    [SerializeField] private InventoryObject bank;
+    [SerializeField] private SpriteLibrary spriteLibrary;
+    [SerializeField] private Item heallthPotion;
+    private PlayerController playerController;
+    [SerializeField] private PotionPanel potionPanel;
+    [SerializeField] private HungerThirstManager hungerThirstManager;
+    [SerializeField] private AtWillManager atWillManager;    
+    [SerializeField] private LesserArcanaManager lesserArcanaManager;    
+    [SerializeField] private GameObject cCGameObj;
+    [SerializeField] private GameObject socialManager;
+    //ref bools:
+    public bool justCreated = true;     
+
+    //Player:
+    private void Start(){
+        // if (!IsLocalPlayer) return;
+        playerController = GetComponentInParent<PlayerController>();       
+        // Hats:
+        nextHat.onClick.AddListener(SelectNextHat);
+        previousHat.onClick.AddListener(SelectPreviousHat);
+        noHat.onClick.AddListener(RemoveHat);
+        //Bodies:
+        nextBody.onClick.AddListener(SelectNextBody);
+        previousBody.onClick.AddListener(SelectPreviousBody);
+        //Beards:
+        nextBeard.onClick.AddListener(SelectNextBeard);
+        previousBeard.onClick.AddListener(SelectPreviousBeard);
+        noBeard.onClick.AddListener(RemoveBeard);
+        //Hair:
+        nextHair.onClick.AddListener(SelectNextHair);
+        previousHair.onClick.AddListener(SelectPreviousHair);
+        hairColor.onClick.AddListener(SelectHairColor);
+        //Arms:
+        nextArms.onClick.AddListener(SelectNextArms);
+        previousArms.onClick.AddListener(SelectPreviousArms); 
+                
+        
+        save.onClick.AddListener(SaveCharacter);       
+
+        cCGameObj.SetActive(true);        
+               
+    }
+   //hats: --------------------
+    public void SelectNextHat(){
+       currentHat += 1;
+       if (currentHat >= hats.Count)
+        currentHat = 0;
+       hatRenderer.sprite = hats[currentHat];
+        
+    }
+
+    public void SelectPreviousHat(){
+        currentHat -= 1;
+        if (currentHat <= -1)
+            currentHat = hats.Count - 1;
+       hatRenderer.sprite = hats[currentHat];
+        
+    }
+
+    public void RemoveHat()
+    {
+        hatRenderer.sprite = null;
+    }
+
+    //Bodies: =========================
+    public void SelectNextBody(){
+       currentBody += 1;
+       if (currentBody >= hats.Count)
+        currentBody = 0;
+       bodyRenderer.sprite = bodies[currentBody];
+        
+    }
+
+    public void SelectPreviousBody(){
+        currentBody -= 1;
+        if (currentBody <= -1)
+            currentBody = bodies.Count - 1;
+       bodyRenderer.sprite = bodies[currentBody];
+        
+    }
+
+    //Beards: -----------------------
+    public void SelectNextBeard(){
+       currentBeard += 1;
+       if (currentBeard >= beards.Count)
+        currentBeard = 0;
+       beardRenderer.sprite = beards[currentBeard];
+        
+    }
+
+    public void SelectPreviousBeard(){
+        currentBeard -= 1;
+        if (currentBeard <= -1)
+            currentBeard = beards.Count - 1;
+       beardRenderer.sprite = beards[currentBeard];
+        
+    }
+    public void RemoveBeard()
+    {
+        beardRenderer.sprite = null;
+    }
+
+    //Hair: ------------------------
+    public void SelectNextHair(){
+       currentHair += 1;
+       if (currentHair >= hair.Count)
+        currentHair = 0;
+       hairRenderer.sprite = hair[currentHair];
+        
+    }
+
+    public void SelectPreviousHair(){
+        currentHair -= 1;
+        if (currentHair <= -1)
+            currentHair = hair.Count - 1;
+       hairRenderer.sprite = hair[currentHair];
+        
+    }
+
+    public void SelectHairColor(){
+        colorInt += 1;        
+        if (colorInt > colorOptions.Count - 1)
+            colorInt = 0;
+        hairRenderer.color = colorOptions[colorInt];        
+        PlayerController.hairColor = colorOptions[colorInt];
+    }
+
+    //Arms: -------------------
+    public void SelectNextArms(){
+        currentArm += 1;
+        if (currentArm <= -1)
+            currentArm = topArms.Count -1;
+        topArmRenderer.sprite = topArms[currentArm];
+        bottomArmRenderer.sprite = bottomArms[currentArm];        
+    }
+
+    public void SelectPreviousArms(){
+        currentArm -= 1;
+        if (currentArm > topArms.Count - 1)
+            currentArm = 0;
+        topArmRenderer.sprite = topArms[currentArm];
+        bottomArmRenderer.sprite = bottomArms[currentArm];        
+    }
+
+    public void SaveCharacter(){
+        //player Reset: --------------------------
+        WorldTimer.hoursLeft = 24;
+        TattooDisplay.debt = 0;  
+        
+        
+        hungerThirstManager.ThirstLevelSet(100);
+        hungerThirstManager.HungerLevelSet(100);       
+
+        atWillManager.inAtWillMenu = false;
+
+        LocationManager.firstTime = true;
+        //potion panel:
+        potionPanel.DisableAll();
+        potionPanel.ActivateHealthPot();
+        
+        WipeInventory();
+
+        StartingInventory();
+        bank.EmptyInventory();
+
+        //Encounter Resets: ------------------------
+        
+        
+        DesertBowl.numMeatFound = 0;
+
+        FountainAI.wasKilled = false;
+        FountainAI.isHostile = false;
+        PlayerManager.AssignPlayer(self);
+        AlchamyGuy.hasTalked = false;
+        SocialEncounterManager.beggerGavePlayerMoney = false;
+        
+        justCreated = false;
+        SceneManager.LoadScene("Cadava Slave Quarters");
+        /*SceneManager.LoadScene("Grats Castle");*/
+        playerController.alive = true;
+
+        DontDestroyOnLoad(self);
+        
+
+        cCGameObj.SetActive(false);
+        hud.SetActive(true);
+        PlayerManager.player1.GetComponentInParent<PlayerController>().CameraAdjust(5.5f);
+        PlayerController.justCreated = false;
+        
+
+        // if (IsHost) Destroy(cCGameObj); 
+        // else 
+
+    }
+
+    private void StartingInventory(){
+    if (DifficultyManager.easyMode)
+        {
+            playerInventory.AddItem(meteorBomb, 1);
+            lesserArcanaManager.EnableHolyHell();
+        }
+            
+        playerInventory.AddItem(heallthPotion, 2);
+        potionPanel.DisplayHealthPotAmount();
+   }
+
+    private void WipeInventory()
+    {
+        playerInventory.EmptyInventory();
+    }
+
+    
+}
